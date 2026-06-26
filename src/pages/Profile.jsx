@@ -20,7 +20,7 @@ export default function Profile() {
   const { user, signOut, deleteAccount, firebaseReady } = useAuth();
   const { permission, notificationsEnabled, toggleNotifications } = useNotifications();
   const { isLockEnabled, hasSetup, lockType, disableLock, enableLock, resetLock } = useAppLock();
-  const { accentColor, setColorPreset } = useTheme();
+  const { accentColor, setColorPreset, setCustomColor } = useTheme();
   const [formData, setFormData] = useState({ ...profile });
   const [saved, setSaved] = useState(false);
   const fileInputRef = useRef(null);
@@ -344,6 +344,32 @@ export default function Profile() {
                     title={preset.name}
                   />
                 ))}
+                
+                {/* Custom Color Wheel */}
+                <motion.div 
+                  style={{ position: 'relative', width: 32, height: 32 }}
+                  whileHover={{ scale: 1.15 }}
+                  whileTap={{ scale: 0.9 }}
+                  title="Custom Color"
+                >
+                  <input
+                    type="color"
+                    value={accentColor?.name === 'Custom' ? accentColor.primary : '#ffffff'}
+                    onChange={(e) => setCustomColor(e.target.value, e.target.value)}
+                    style={{
+                      position: 'absolute', opacity: 0, width: '100%', height: '100%', cursor: 'pointer', zIndex: 2
+                    }}
+                  />
+                  <div
+                    style={{
+                      width: 32, height: 32, borderRadius: '50%',
+                      background: accentColor?.name === 'Custom' ? accentColor.primary : 'conic-gradient(from 90deg, red, yellow, lime, aqua, blue, magenta, red)',
+                      border: accentColor?.name === 'Custom' ? '2px solid var(--text-primary)' : '2px solid var(--bg-secondary)',
+                      boxShadow: '0 0 0 2px var(--border-primary)',
+                      pointerEvents: 'none'
+                    }}
+                  />
+                </motion.div>
               </div>
             </div>
 
