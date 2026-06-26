@@ -47,6 +47,7 @@ export default function MouseGlow() {
     };
   }, []);
 
+  return (
     <>
       {/* Mouse-tracking glow */}
       <div
