@@ -12,18 +12,31 @@ export const DEFAULT_SUBJECTS = [
   { id: 'sub6', name: 'Digital Electronics', code: 'EC301', teacher: 'Dr. Priya Nair', days: ['Tuesday', 'Thursday', 'Saturday'], periodsPerDay: { Tuesday: 1, Thursday: 1, Saturday: 1 }, totalClasses: 30, attended: 20, color: '#ef4444' },
 ];
 
-export const BRANCHES = ['CSE', 'IT', 'ECE', 'EE', 'ME', 'CE'];
-export const YEARS = [1, 2, 3, 4];
-export const SECTIONS = ['A', 'B'];
+export const BRANCHES = [
+  'Civil Engineering',
+  'Mechanical Engineering',
+  'Electrical Engineering',
+  'Electronics & Communication Engineering',
+  'Computer Science & Engineering',
+  'Materials & Metallurgical Engineering',
+  'Chemical Engineering',
+  'B. Architecture',
+  'B. Planning'
+];
+export const YEARS = [1, 2, 3, 4, 5];
+export const SECTIONS = ['A', 'B', 'NA'];
+export const SEMESTERS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+export const PROGRAMS = ['Bachelor', 'Masters', 'PhD'];
 export const DAYS_OF_WEEK = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export const DEFAULT_PROFILE = {
   name: 'MANIT Student',
   scholarNo: '2210110001',
-  branch: 'CSE',
+  branch: 'Computer Science & Engineering',
   section: 'A',
   year: 3,
   semester: 5,
+  program: 'Bachelor',
 };
 
 /**

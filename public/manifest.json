@@ -1,44 +1,23 @@
 {
-  "name": "MANIT Attendance — Smart Tracking",
+  "name": "MANIT Attendance",
   "short_name": "Attendance",
-  "description": "Smart Attendance Tracking System for MANIT Bhopal students. Track, manage, and analyze your class attendance.",
+  "description": "Smart Attendance Tracker for MANIT Students",
   "start_url": "/",
-  "scope": "/",
   "display": "standalone",
   "background_color": "#0a0e1a",
   "theme_color": "#3b82f6",
-  "orientation": "portrait-primary",
-  "categories": ["education", "productivity"],
-  "lang": "en",
-  "dir": "ltr",
-  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/icon-192.png",
-      "sizes": "192x192",
       "type": "image/png",
+      "sizes": "192x192",
       "purpose": "any maskable"
     },
     {
       "src": "/icon-512.png",
-      "sizes": "512x512",
       "type": "image/png",
+      "sizes": "512x512",
       "purpose": "any maskable"
-    }
-  ],
-  "screenshots": [],
-  "shortcuts": [
-    {
-      "name": "Today's Classes",
-      "short_name": "Today",
-      "url": "/today",
-      "description": "Mark today's attendance"
-    },
-    {
-      "name": "My Subjects",
-      "short_name": "Subjects",
-      "url": "/subjects",
-      "description": "Manage your subjects"
     }
   ]
 }

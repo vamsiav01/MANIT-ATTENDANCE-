@@ -177,3 +177,69 @@ export function exportToCSV(subjects, profile) {
   link.click();
   URL.revokeObjectURL(link.href);
 }
+
+/**
+ * Calculate the current attendance streak (consecutive days attended without absence).
+ */
+export function getCurrentStreak(history) {
+  if (!history || Object.keys(history).length === 0) return 0;
+  const sortedDates = Object.keys(history).sort((a, b) => new Date(b) - new Date(a));
+  
+  let streak = 0;
+  for (const date of sortedDates) {
+    const dayData = history[date];
+    const entries = Object.values(dayData);
+    const hasAbsent = entries.some(s => (typeof s === 'string' ? s : s.status) === 'absent');
+    const hasPresent = entries.some(s => (typeof s === 'string' ? s : s.status) === 'present');
+    
+    if (hasAbsent) break;
+    if (hasPresent) streak++;
+  }
+  return streak;
+}
+
+/**
+ * Generate iCalendar (.ics) string for Google Calendar sync.
+ * Assumes 1-hour classes starting at 9:00 AM.
+ */
+export function generateICalendar(subjects, schedule) {
+  let ics = "BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//MANIT Attendance App//EN\n";
+  const daysMap = { 'Sunday': 'SU', 'Monday': 'MO', 'Tuesday': 'TU', 'Wednesday': 'WE', 'Thursday': 'TH', 'Friday': 'FR', 'Saturday': 'SA' };
+  const dayOffsetMap = { 'Sunday': 0, 'Monday': 1, 'Tuesday': 2, 'Wednesday': 3, 'Thursday': 4, 'Friday': 5, 'Saturday': 6 };
+  
+  const now = new Date();
+  const baseDay = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
+  
+  Object.keys(schedule).forEach(dayName => {
+    const dailySubs = schedule[dayName];
+    if (!dailySubs || dailySubs.length === 0) return;
+    
+    let startHour = 9;
+    dailySubs.forEach(subId => {
+      const sub = subjects.find(s => s.id === subId);
+      if (!sub) return;
+      
+      const periods = typeof sub.periodsPerDay === 'object' ? (sub.periodsPerDay[dayName] || 1) : (sub.periodsPerDay || 1);
+      const eventDate = new Date(baseDay);
+      eventDate.setDate(eventDate.getDate() + dayOffsetMap[dayName]);
+      
+      const startStr = `${eventDate.getFullYear()}${String(eventDate.getMonth()+1).padStart(2,'0')}${String(eventDate.getDate()).padStart(2,'0')}T${String(startHour).padStart(2,'0')}0000`;
+      const endStr = `${eventDate.getFullYear()}${String(eventDate.getMonth()+1).padStart(2,'0')}${String(eventDate.getDate()).padStart(2,'0')}T${String(startHour + periods).padStart(2,'0')}0000`;
+      
+      ics += "BEGIN:VEVENT\n";
+      ics += `UID:${subId}-${dayName}-${Date.now()}@manit.attendance\n`;
+      ics += `DTSTART:${startStr}\n`;
+      ics += `DTEND:${endStr}\n`;
+      ics += `RRULE:FREQ=WEEKLY;BYDAY=${daysMap[dayName]}\n`;
+      ics += `SUMMARY:${sub.name} (${sub.code})\n`;
+      if (sub.teacher) ics += `DESCRIPTION:Teacher: ${sub.teacher}\n`;
+      ics += "BEGIN:VALARM\nTRIGGER:-PT10M\nACTION:DISPLAY\nDESCRIPTION:Class Starting\nEND:VALARM\n";
+      ics += "END:VEVENT\n";
+      
+      startHour += periods;
+    });
+  });
+  
+  ics += "END:VCALENDAR";
+  return ics;
+}

@@ -8,7 +8,7 @@ import {
   BarChart3,
   Calendar,
   GraduationCap,
-  RotateCcw,
+  Trash2,
   User,
   Sun,
   Moon,
@@ -18,6 +18,7 @@ import {
   LogOut,
   Palette,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAttendance } from '../context/AttendanceContext';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
@@ -33,14 +34,18 @@ const navItems = [
   { path: '/analytics', icon: BarChart3, label: 'Analytics' },
   { path: '/calendar', icon: Calendar, label: 'Calendar' },
   { path: '/profile', icon: User, label: 'My Profile' },
+  { path: '/trash', icon: Trash2, label: 'Trash' },
 ];
 
 export default function Sidebar() {
   const location = useLocation();
-  const { resetData, profile } = useAttendance();
+  const navigate = useNavigate();
+  const { profile, bin } = useAttendance();
   const { theme, toggleTheme, accentColor } = useTheme();
   const { user, signOut } = useAuth();
   const [showCustomizer, setShowCustomizer] = useState(false);
+
+  const trashCount = bin?.length || 0;
 
   const displayName = user?.displayName || profile.name;
   const photoURL = user?.photoURL;
@@ -140,9 +145,14 @@ export default function Sidebar() {
             </div>
           </button>
 
-          <button className="nav-link" onClick={resetData} title="Reset to sample data">
-            <RotateCcw size={19} className="nav-icon" />
-            <span>Reset Data</span>
+          <button className="nav-link" onClick={() => navigate('/trash')} title="View Trash" id="goto-trash-btn" style={{ position: 'relative' }}>
+            <Trash2 size={19} className="nav-icon" style={{ color: trashCount > 0 ? 'var(--danger-400)' : undefined }} />
+            <span>Trash</span>
+            {trashCount > 0 && (
+              <span style={{ marginLeft: 'auto', minWidth: 18, height: 18, borderRadius: 9, background: 'var(--danger-500)', color: 'white', fontSize: '0.65rem', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 5px' }}>
+                {trashCount}
+              </span>
+            )}
           </button>
 
           {/* Sign Out */}

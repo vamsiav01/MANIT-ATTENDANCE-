@@ -1,20 +1,36 @@
 import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
-  User, Save, GraduationCap, BookOpen, Cloud, CloudOff, Download, Upload,
+  User, Save, BookOpen, CloudOff, Cloud, Download, Upload,
   CheckCircle2, Loader2, AlertTriangle, RefreshCw, LogOut, Shield,
+  Bell, BellOff, Lock, RotateCcw, Trash2,
 } from 'lucide-react';
 import { useAttendance } from '../context/AttendanceContext';
 import { useAuth } from '../context/AuthContext';
-import { BRANCHES, YEARS, SECTIONS } from '../utils/sampleData';
-import { getOverallPercentage, getSubjectPercentage, getPctClass } from '../utils/helpers';
+import { useNotifications } from '../context/NotificationContext';
+import { useAppLock } from '../context/AppLockContext';
+import { useTheme } from '../context/ThemeContext';
+import { BRANCHES, YEARS, SECTIONS, SEMESTERS, PROGRAMS } from '../utils/sampleData';
+import { getOverallPercentage, getSubjectPercentage } from '../utils/helpers';
+import { AppLockSettings } from '../components/AppLock';
 
 export default function Profile() {
-  const { profile, subjects, updateProfile, syncStatus, lastSynced, exportBackup, importBackup, forceSyncNow } = useAttendance();
-  const { user, signOut, firebaseReady } = useAuth();
+  const { profile, subjects, updateProfile, syncStatus, lastSynced, exportBackup, importBackup, forceSyncNow, resetData } = useAttendance();
+  const { user, signOut, deleteAccount, firebaseReady } = useAuth();
+  const { permission, notificationsEnabled, toggleNotifications } = useNotifications();
+  const { isLockEnabled, hasSetup, lockType, disableLock, enableLock, resetLock } = useAppLock();
+  const { accentColor, setColorPreset } = useTheme();
   const [formData, setFormData] = useState({ ...profile });
   const [saved, setSaved] = useState(false);
   const fileInputRef = useRef(null);
+  const [showLockModal, setShowLockModal] = useState(false);
+  const [isMobile, setIsMobile] = React.useState(() => window.innerWidth <= 768);
+
+  React.useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const overall = getOverallPercentage(subjects);
 
@@ -23,6 +39,16 @@ export default function Profile() {
     updateProfile(formData);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
+  };
+
+  const handleDeleteAccount = async () => {
+    if (window.confirm("Are you sure you want to permanently delete your account? This action cannot be undone.")) {
+      try {
+        await deleteAccount();
+      } catch (err) {
+        alert(err.message || "Failed to delete account. Please sign out and sign in again.");
+      }
+    }
   };
 
   const handleImport = (e) => {
@@ -58,6 +84,8 @@ export default function Profile() {
     }
   };
 
+  const isHttp = window.location.protocol === 'http:' && window.location.hostname !== 'localhost';
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -69,18 +97,27 @@ export default function Profile() {
         <p>Manage your personal information, account, and backup settings.</p>
       </div>
 
-      <div className="grid-2">
-        {/* Left Column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* Profile Form */}
-          <div className="glass-card" style={{ padding: 28 }}>
+      {/* Bottom padding so FAB doesn't overlap content */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+        gap: isMobile ? 12 : 16,
+        alignItems: 'start',
+        width: '100%',
+        overflow: 'hidden',
+        paddingBottom: isMobile ? 80 : 0,
+      }}>
+        {/* ── LEFT COLUMN ── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0, overflow: 'hidden' }}>
+
+          {/* Personal Information */}
+          <div className="glass-card" style={{ padding: isMobile ? 16 : 28 }}>
             <h3 style={{ fontSize: '0.95rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
               <User size={18} style={{ color: 'var(--primary-400)' }} />
               Personal Information
             </h3>
-
             <form onSubmit={handleSave}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                 <div className="form-group">
                   <label className="form-label">Full Name</label>
                   <input type="text" className="form-input" value={formData.name}
@@ -91,33 +128,69 @@ export default function Profile() {
                   <input type="text" className="form-input" value={formData.scholarNo}
                     onChange={(e) => setFormData({ ...formData, scholarNo: e.target.value })} id="profile-scholar-input" />
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? 8 : 12 }}>
                   <div className="form-group">
                     <label className="form-label">Branch</label>
-                    <select className="form-select" value={formData.branch}
-                      onChange={(e) => setFormData({ ...formData, branch: e.target.value })} id="profile-branch-select">
+                    <select className="form-select" 
+                      value={BRANCHES.includes(formData.branch) ? formData.branch : 'OTHER'}
+                      onChange={(e) => {
+                        if (e.target.value === 'OTHER') setFormData({ ...formData, branch: '' });
+                        else setFormData({ ...formData, branch: e.target.value });
+                      }} id="profile-branch-select">
+                      <option value="" disabled>Select Branch</option>
                       {BRANCHES.map((b) => <option key={b} value={b}>{b}</option>)}
+                      <option value="OTHER">Other (Type Manually)</option>
                     </select>
+                    {!BRANCHES.includes(formData.branch) && (
+                      <input type="text" className="form-input" style={{ marginTop: 8 }} placeholder="Type branch name..." 
+                        value={formData.branch} onChange={(e) => setFormData({ ...formData, branch: e.target.value })} 
+                        id="profile-branch-input" autoFocus />
+                    )}
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Section</label>
-                    <select className="form-select" value={formData.section}
-                      onChange={(e) => setFormData({ ...formData, section: e.target.value })} id="profile-section-select">
-                      {SECTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+                    <label className="form-label">Program</label>
+                    <select className="form-select" value={formData.program || ''}
+                      onChange={(e) => setFormData({ ...formData, program: e.target.value })}
+                      id="profile-program-input">
+                      {PROGRAMS.map((p) => <option key={p} value={p}>{p}</option>)}
                     </select>
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr', gap: isMobile ? 8 : 12 }}>
+                  <div className="form-group">
+                    <label className="form-label">Section</label>
+                    <select className="form-select" 
+                      value={SECTIONS.includes(formData.section) ? formData.section : 'OTHER'}
+                      onChange={(e) => {
+                        if (e.target.value === 'OTHER') setFormData({ ...formData, section: '' });
+                        else setFormData({ ...formData, section: e.target.value });
+                      }} id="profile-section-select">
+                      <option value="" disabled>Select Section</option>
+                      {SECTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+                      <option value="OTHER">Other</option>
+                    </select>
+                    {!SECTIONS.includes(formData.section) && (
+                      <input type="text" className="form-input" style={{ marginTop: 8 }} placeholder="Type section..." 
+                        value={formData.section} onChange={(e) => setFormData({ ...formData, section: e.target.value.toUpperCase() })} 
+                        id="profile-section-input" autoFocus />
+                    )}
                   </div>
                   <div className="form-group">
                     <label className="form-label">Year</label>
                     <select className="form-select" value={formData.year}
-                      onChange={(e) => setFormData({ ...formData, year: Number(e.target.value) })} id="profile-year-select">
+                      onChange={(e) => setFormData({ ...formData, year: e.target.value })}
+                      id="profile-year-input">
                       {YEARS.map((y) => <option key={y} value={y}>{y}</option>)}
                     </select>
                   </div>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Semester</label>
-                  <input type="number" className="form-input" min="1" max="8" value={formData.semester}
-                    onChange={(e) => setFormData({ ...formData, semester: Number(e.target.value) })} id="profile-semester-input" />
+                  <div className="form-group">
+                    <label className="form-label">Semester</label>
+                    <select className="form-select" value={formData.semester}
+                      onChange={(e) => setFormData({ ...formData, semester: Number(e.target.value) || e.target.value })}
+                      id="profile-semester-input">
+                      {SEMESTERS.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  </div>
                 </div>
               </div>
               <button type="submit" className="btn btn-primary" id="save-profile-btn"
@@ -128,16 +201,15 @@ export default function Profile() {
           </div>
 
           {/* Account & Backup */}
-          <div className="glass-card" style={{ padding: 28 }}>
+          <div className="glass-card" style={{ padding: isMobile ? 16 : 28 }}>
             <h3 style={{ fontSize: '0.95rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
               <Shield size={18} style={{ color: 'var(--accent-400)' }} />
-              Account & Backup
+              Account &amp; Backup
             </h3>
 
-            {/* Account Info */}
             {user && user.uid !== 'local' ? (
               <div style={{
-                display: 'flex', alignItems: 'center', gap: 12, padding: 16,
+                display: 'flex', alignItems: 'center', gap: 12, padding: 14,
                 borderRadius: 'var(--radius-md)', background: 'rgba(34,197,94,0.06)',
                 border: '1px solid rgba(34,197,94,0.15)', marginBottom: 16,
               }}>
@@ -151,30 +223,30 @@ export default function Profile() {
                     color: 'white', fontWeight: 700, fontSize: '0.82rem',
                   }}>{user.displayName?.[0]?.toUpperCase() || '?'}</div>
                 )}
-                <div style={{ flex: 1 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>{user.displayName}</div>
-                  <div style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>{user.email}</div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', overflow: 'hidden', textOverflow: 'ellipsis' }}>{user.email}</div>
                 </div>
-                <span className="badge badge-success" style={{ fontSize: '0.65rem' }}>
+                <span className="badge badge-success" style={{ fontSize: '0.65rem', flexShrink: 0 }}>
                   {user.provider === 'google.com' ? 'Google' : 'Email'}
                 </span>
               </div>
             ) : (
               <div style={{
-                padding: 16, borderRadius: 'var(--radius-md)', background: 'rgba(234,179,8,0.06)',
+                padding: 12, borderRadius: 'var(--radius-md)', background: 'rgba(234,179,8,0.06)',
                 border: '1px solid rgba(234,179,8,0.15)', marginBottom: 16,
                 fontSize: '0.82rem', color: 'var(--warning-400)',
+                display: 'flex', alignItems: 'flex-start', gap: 8,
               }}>
-                <CloudOff size={14} style={{ marginRight: 6 }} />
-                Guest mode — data saved locally only. Sign in to enable cloud backup.
+                <CloudOff size={14} style={{ flexShrink: 0, marginTop: 2 }} />
+                <span style={{ wordBreak: 'break-word', lineHeight: 1.5 }}>Guest mode — data saved locally only. Sign in to enable cloud backup.</span>
               </div>
             )}
 
-            {/* Sync Status */}
             {user && user.uid !== 'local' && firebaseReady && (
               <div style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                padding: '12px 16px', borderRadius: 'var(--radius-sm)',
+                padding: '12px 14px', borderRadius: 'var(--radius-sm)',
                 background: 'var(--bg-glass)', border: '1px solid var(--border-primary)',
                 marginBottom: 16,
               }}>
@@ -190,8 +262,8 @@ export default function Profile() {
               </div>
             )}
 
-            {/* Backup Buttons */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+            {/* Backup Buttons — stack on mobile */}
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: 10, marginBottom: 12 }}>
               <motion.button className="btn btn-outline" onClick={exportBackup}
                 whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
                 style={{ justifyContent: 'center' }} id="export-backup-btn">
@@ -203,32 +275,229 @@ export default function Profile() {
                 <Upload size={16} /> Import JSON
               </motion.button>
             </div>
-            <input ref={fileInputRef} type="file" accept=".json" onChange={handleImport} style={{ display: 'none' }} />
+            <motion.button className="btn btn-outline" onClick={resetData}
+              whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+              style={{ justifyContent: 'center', width: '100%', borderColor: 'rgba(239,68,68,0.5)', color: 'var(--danger-400)' }} id="reset-data-btn">
+              <RotateCcw size={16} /> Reset App Data
+            </motion.button>
+            <input type="file" ref={fileInputRef} onChange={handleImport} accept=".json" style={{ display: 'none' }} />
             <p style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)', textAlign: 'center' }}>
               Export/Import your data as a JSON file for manual backup.
             </p>
 
-            {/* Sign Out */}
             {user && user.uid !== 'local' && (
-              <motion.button className="btn btn-danger" onClick={signOut}
-                style={{ width: '100%', justifyContent: 'center', marginTop: 16 }}
-                whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} id="profile-sign-out-btn">
-                <LogOut size={16} /> Sign Out
+              <>
+                <motion.button className="btn btn-outline" onClick={signOut}
+                  style={{ width: '100%', justifyContent: 'center', marginTop: 16, borderColor: 'var(--border-primary)', color: 'var(--text-secondary)' }}
+                  whileHover={{ scale: 1.02, background: 'rgba(255,255,255,0.05)' }} whileTap={{ scale: 0.98 }} id="profile-sign-out-btn">
+                  <LogOut size={16} /> Sign Out
+                </motion.button>
+                <motion.button className="btn btn-danger" onClick={handleDeleteAccount}
+                  style={{ width: '100%', justifyContent: 'center', marginTop: 10 }}
+                  whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} id="profile-delete-account-btn">
+                  <Trash2 size={16} /> Delete Account
+                </motion.button>
+              </>
+            )}
+
+            {user && user.uid === 'local' && (
+              <motion.button className="btn btn-outline" onClick={handleDeleteAccount}
+                style={{ width: '100%', justifyContent: 'center', marginTop: 16, borderColor: 'rgba(239,68,68,0.3)', color: 'var(--danger-400)' }}
+                whileHover={{ scale: 1.02, background: 'rgba(239,68,68,0.1)' }} whileTap={{ scale: 0.98 }} id="profile-delete-guest-btn">
+                <Trash2 size={16} /> Delete Guest Data
               </motion.button>
             )}
           </div>
+
+          {/* Settings: Notifications + App Lock */}
+          <div className="glass-card" style={{ padding: isMobile ? 16 : 22 }}>
+            <h3 style={{ fontSize: '0.88rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+              <Shield size={16} style={{ color: 'var(--primary-400)' }} />
+              Settings
+            </h3>
+
+            {/* Theme Settings */}
+            <div style={{ marginBottom: 20 }}>
+              <p style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 12 }}>Theme Accent</p>
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                {[
+                  { name: 'Ocean Blue', primary: '#3b82f6', accent: '#8b5cf6' },
+                  { name: 'Midnight Violet', primary: '#8b5cf6', accent: '#ec4899' },
+                  { name: 'Sakura Pink', primary: '#f43f5e', accent: '#f97316' },
+                  { name: 'Forest Green', primary: '#10b981', accent: '#3b82f6' },
+                  { name: 'Cyber Yellow', primary: '#eab308', accent: '#f97316' }
+                ].map((preset) => (
+                  <motion.button
+                    key={preset.name}
+                    type="button"
+                    onClick={() => setColorPreset(preset)}
+                    style={{
+                      width: 32, height: 32, borderRadius: '50%',
+                      background: `linear-gradient(135deg, ${preset.primary}, ${preset.accent})`,
+                      border: accentColor?.name === preset.name ? '2px solid var(--text-primary)' : '2px solid var(--bg-secondary)',
+                      boxShadow: '0 0 0 2px var(--border-primary)',
+                      cursor: 'pointer'
+                    }}
+                    whileHover={{ scale: 1.15 }}
+                    whileTap={{ scale: 0.9 }}
+                    title={preset.name}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Notifications */}
+            <div style={{ marginBottom: 16 }}>
+              <p style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Notifications</p>
+
+              {permission === 'unsupported' ? (
+                <div style={{
+                  padding: 14, borderRadius: 10,
+                  background: 'rgba(234,179,8,0.06)', border: '1px solid rgba(234,179,8,0.2)',
+                  fontSize: '0.78rem', color: 'var(--warning-400)', lineHeight: 1.6,
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, marginBottom: 6 }}>
+                    <AlertTriangle size={15} style={{ flexShrink: 0 }} /> Push Not Supported
+                  </div>
+                  Your browser or current connection does not support push notifications. In-app alerts will still work!
+                </div>
+              ) : (
+                <>
+                  <div style={{
+                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                    padding: '12px 14px', borderRadius: 10,
+                    background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-primary)',
+                    marginBottom: 8, overflow: 'hidden',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      {notificationsEnabled
+                        ? <Bell size={16} style={{ color: 'var(--primary-400)' }} />
+                        : <BellOff size={16} style={{ color: 'var(--text-tertiary)' }} />}
+                      <div>
+                        <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>Push Notifications</div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>Low attendance &amp; daily reminders</div>
+                      </div>
+                    </div>
+                    <label className="native-toggle" htmlFor="profile-notif-toggle" title={notificationsEnabled ? 'Notifications ON' : 'Notifications OFF'}>
+                      <input
+                        type="checkbox"
+                        id="profile-notif-toggle"
+                        checked={notificationsEnabled}
+                        onChange={() => toggleNotifications(profile.name)}
+                      />
+                      <span className="native-toggle-track" />
+                      <span className="native-toggle-thumb" />
+                    </label>
+                  </div>
+                  {permission === 'default' && (
+                    <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.2)', display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.78rem', color: 'var(--primary-400)' }}>
+                      <Bell size={14} /> Toggle ON above to enable push notifications
+                    </div>
+                  )}
+                  {permission === 'denied' && (
+                    <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '0.73rem', color: 'var(--danger-400)', lineHeight: 1.6 }}>
+                      <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 2 }} />
+                      <span>Blocked. Go to <b>Phone Settings → Apps → Chrome → Notifications</b> and tap Allow, then toggle ON here.</span>
+                    </div>
+                  )}
+                  {permission === 'granted' && notificationsEnabled && (
+                    <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.2)', display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.78rem', color: 'var(--success-400)' }}>
+                      <CheckCircle2 size={14} /> Push notifications are active
+                    </div>
+                  )}
+                  {permission === 'granted' && !notificationsEnabled && (
+                    <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(234,179,8,0.06)', border: '1px solid rgba(234,179,8,0.2)', display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.78rem', color: 'var(--warning-400)' }}>
+                      <BellOff size={14} /> Paused — toggle ON to re-enable
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* App Lock */}
+            <div style={{ paddingTop: 14, borderTop: '1px solid var(--border-primary)' }}>
+              <p style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>App Lock</p>
+              <div style={{
+                padding: '12px 14px', borderRadius: 10,
+                background: isLockEnabled ? 'rgba(34,197,94,0.06)' : 'rgba(255,255,255,0.03)',
+                border: `1px solid ${isLockEnabled ? 'rgba(34,197,94,0.2)' : 'var(--border-primary)'}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                marginBottom: 8,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <Lock size={16} style={{ color: isLockEnabled ? 'var(--success-400)' : 'var(--text-tertiary)' }} />
+                  <div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>
+                      App Lock {isLockEnabled ? <span style={{ color: 'var(--success-400)' }}>ON</span> : <span style={{ color: 'var(--text-tertiary)' }}>OFF</span>}
+                    </div>
+                    {hasSetup && (
+                      <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>
+                        Type: {lockType?.charAt(0).toUpperCase() + lockType?.slice(1)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {hasSetup && (
+                  <label className="native-toggle toggle-success" htmlFor="profile-lock-toggle" title={isLockEnabled ? 'Lock ON' : 'Lock OFF'}>
+                    <input
+                      type="checkbox"
+                      id="profile-lock-toggle"
+                      checked={isLockEnabled}
+                      onChange={isLockEnabled ? disableLock : enableLock}
+                    />
+                    <span className="native-toggle-track" />
+                    <span className="native-toggle-thumb" />
+                  </label>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <motion.button
+                  onClick={() => setShowLockModal(true)}
+                  whileTap={{ scale: 0.96 }}
+                  id="profile-setup-lock-btn"
+                  style={{
+                    flex: 1, padding: '10px', borderRadius: 10,
+                    background: 'linear-gradient(135deg, var(--primary-500), var(--accent-500))',
+                    border: 'none', color: 'white', fontWeight: 600, fontSize: '0.82rem',
+                    cursor: 'pointer', fontFamily: 'inherit',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                  }}
+                >
+                  <Shield size={14} /> {hasSetup ? 'Change Lock' : 'Set Up Lock'}
+                </motion.button>
+                {hasSetup && (
+                  <motion.button
+                    onClick={() => { if (window.confirm('Reset App Lock? This will turn off all lock protection.')) resetLock(); }}
+                    whileTap={{ scale: 0.96 }}
+                    id="profile-reset-lock-btn"
+                    style={{
+                      flex: 1, padding: '10px', borderRadius: 10,
+                      background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)',
+                      color: 'var(--danger-400)', fontWeight: 600, fontSize: '0.82rem',
+                      cursor: 'pointer', fontFamily: 'inherit',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                    }}
+                  >
+                    <RotateCcw size={14} /> Reset Lock
+                  </motion.button>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* Right Column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* Overall Card */}
-          <div className="glass-card" style={{ padding: 28, textAlign: 'center' }}>
+        {/* ── RIGHT COLUMN — shown first on mobile ── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, order: isMobile ? -1 : 0, minWidth: 0, overflow: 'hidden' }}>
+
+          {/* Profile Summary Card */}
+          <div className="glass-card" style={{ padding: isMobile ? '20px 16px' : 28, textAlign: 'center' }}>
             <div style={{
-              width: 80, height: 80, borderRadius: 'var(--radius-full)',
+              width: isMobile ? 64 : 80, height: isMobile ? 64 : 80,
+              borderRadius: 'var(--radius-full)',
               background: 'linear-gradient(135deg, var(--primary-500), var(--accent-500))',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'white', fontWeight: 800, fontSize: '1.2rem',
-              margin: '0 auto 16px', boxShadow: '0 0 30px rgba(59,130,246,0.2)',
+              color: 'white', fontWeight: 800, fontSize: isMobile ? '1rem' : '1.2rem',
+              margin: '0 auto 12px', boxShadow: '0 0 30px rgba(59,130,246,0.2)',
               overflow: 'hidden',
             }}>
               {user?.photoURL ? (
@@ -241,19 +510,39 @@ export default function Profile() {
             <p style={{ color: 'var(--text-tertiary)', fontSize: '0.82rem', marginTop: 4 }}>
               Scholar No: {profile.scholarNo}
             </p>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 12 }}>
-              <span className="badge badge-info">{profile.branch}</span>
-              <span className="badge badge-warning">Sec {profile.section}</span>
-              <span className="badge badge-success">Year {profile.year}</span>
-              <span className="badge" style={{ background: 'rgba(139,92,246,0.12)', color: 'var(--accent-400)', border: '1px solid rgba(139,92,246,0.2)' }}>
-                Sem {profile.semester}
-              </span>
+
+            {/* Badges — split into 2 rows to prevent overflow */}
+            <div style={{ marginTop: 12 }}>
+              {/* Row 1: Program + Branch */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginBottom: 6 }}>
+                {profile.program && (
+                  <span className="badge" style={{ background: 'rgba(239,68,68,0.1)', color: 'var(--danger-400)', border: '1px solid rgba(239,68,68,0.2)' }}>
+                    {profile.program}
+                  </span>
+                )}
+                {/* Show wrapped branch to avoid cutoff */}
+                <span className="badge badge-info" style={{ whiteSpace: 'normal', textAlign: 'center', lineHeight: 1.2 }}>
+                  {profile.branch}
+                </span>
+              </div>
+              {/* Row 2: Section, Year, Semester */}
+              <div style={{ display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap' }}>
+                <span className="badge badge-warning">Sec {profile.section}</span>
+                <span className="badge badge-success">Year {profile.year}</span>
+                <span className="badge" style={{ background: 'rgba(139,92,246,0.12)', color: 'var(--accent-400)', border: '1px solid rgba(139,92,246,0.2)' }}>
+                  Sem {profile.semester}
+                </span>
+              </div>
             </div>
+
             <div style={{ marginTop: 20, padding: '16px 0', borderTop: '1px solid var(--border-primary)' }}>
               <p style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
                 Overall Attendance
               </p>
-              <span className={getPctClass(overall)} style={{ fontSize: '2.5rem', fontWeight: 800 }}>{overall}%</span>
+              <span style={{
+                fontSize: '2.5rem', fontWeight: 800,
+                color: overall >= 75 ? '#22c55e' : overall >= 60 ? '#eab308' : '#ef4444',
+              }}>{overall}%</span>
             </div>
           </div>
 
@@ -266,15 +555,17 @@ export default function Profile() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {subjects.map((sub) => {
                 const pct = getSubjectPercentage(sub);
+                const pctColor = pct >= 75 ? '#22c55e' : pct >= 60 ? '#eab308' : '#ef4444';
                 return (
                   <div key={sub.id} style={{
                     display: 'flex', alignItems: 'center', gap: 10,
                     padding: '8px 12px', borderRadius: 'var(--radius-sm)',
                     background: 'rgba(255,255,255,0.03)',
+                    width: '100%', boxSizing: 'border-box',
                   }}>
-                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: sub.color, flexShrink: 0 }} />
-                    <span style={{ flex: 1, fontSize: '0.82rem', fontWeight: 500 }}>{sub.code}</span>
-                    <span className={getPctClass(pct)} style={{ fontWeight: 700, fontSize: '0.82rem' }}>{pct}%</span>
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: sub.color, flexShrink: 0 }} />
+                    <span style={{ flex: 1, fontSize: '0.82rem', fontWeight: 600, minWidth: 0 }}>{sub.code}</span>
+                    <span style={{ fontWeight: 800, fontSize: '0.9rem', flexShrink: 0, color: pctColor }}>{pct}%</span>
                   </div>
                 );
               })}
@@ -287,6 +578,9 @@ export default function Profile() {
         .spin-icon { animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
       `}</style>
+
+      {/* App Lock Modal */}
+      {showLockModal && <AppLockSettings onClose={() => setShowLockModal(false)} />}
     </motion.div>
   );
 }

@@ -8,8 +8,12 @@ import {
   createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
   updateProfile,
+  setPersistence,
+  browserSessionPersistence,
+  deleteUser,
 } from 'firebase/auth';
-import { auth, googleProvider, isFirebaseConfigured } from '../config/firebase';
+import { doc, deleteDoc } from 'firebase/firestore';
+import { auth, db, googleProvider, isFirebaseConfigured } from '../config/firebase';
 
 const AuthContext = createContext();
 
@@ -26,8 +30,12 @@ export function AuthProvider({ children }) {
       return;
     }
 
-    // Check for redirect result (mobile Google sign-in fallback)
-    getRedirectResult(auth)
+    // Force session persistence so user must log in when opening a new tab/link
+    setPersistence(auth, browserSessionPersistence)
+      .then(() => {
+        // Check for redirect result (mobile Google sign-in fallback)
+        return getRedirectResult(auth);
+      })
       .then((result) => {
         if (result?.user) {
           // User signed in via redirect, onAuthStateChanged will handle the state
@@ -48,10 +56,16 @@ export function AuthProvider({ children }) {
           photoURL: firebaseUser.photoURL,
           provider: firebaseUser.providerData?.[0]?.providerId || 'unknown',
         });
+        setLoading(false);
       } else {
-        setUser(null);
+        if (sessionStorage.getItem('autoLoginGuest') === 'true') {
+          sessionStorage.removeItem('autoLoginGuest');
+          setUser({ uid: 'local', displayName: 'Guest', email: 'guest@local', photoURL: null, provider: 'local' });
+        } else {
+          setUser(null);
+        }
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => unsubscribe();
@@ -150,10 +164,75 @@ export function AuthProvider({ children }) {
     } catch (err) {
       console.warn('Firebase sign out error:', err.message);
     }
+    
+    // Clear all local app data (except theme) so the next user starts fresh
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('manit_self_') && key !== 'manit_self_theme') {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach(k => localStorage.removeItem(k));
+    
     setUser(null);
+    window.location.reload(); // Force full reload to clear all React state
+  };
+
+  const deleteAccount = async () => {
+    try {
+      if (firebaseReady && auth && auth.currentUser) {
+        const uid = auth.currentUser.uid;
+        if (db) {
+          try {
+            await deleteDoc(doc(db, 'users', uid));
+          } catch (e) {
+            console.warn('Could not delete firestore data:', e);
+          }
+        }
+        await deleteUser(auth.currentUser);
+      }
+    } catch (err) {
+      if (err.code === 'auth/requires-recent-login') {
+        setError('For security reasons, please sign out and sign in again before deleting your account.');
+        throw err;
+      }
+      console.warn('Firebase account deletion error:', err.message);
+      throw err;
+    }
+    
+    // Clear all local app data (except theme)
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('manit_self_') && key !== 'manit_self_theme') {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach(k => localStorage.removeItem(k));
+    
+    setUser(null);
+    window.location.reload();
   };
 
   const skipAuth = () => {
+    if (localStorage.getItem('manit_self_is_setup') === 'true') {
+      const wantFresh = window.confirm("Existing offline data found. Click 'OK' to continue with it, or 'Cancel' to start a fresh account.");
+      if (!wantFresh) {
+        // Clear all local app data (except theme) to start fresh
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('manit_self_') && key !== 'manit_self_theme') {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach(k => localStorage.removeItem(k));
+        sessionStorage.setItem('autoLoginGuest', 'true');
+        window.location.reload();
+        return;
+      }
+    }
     setUser({ uid: 'local', displayName: 'Guest', email: 'guest@local', photoURL: null, provider: 'local' });
     setLoading(false);
   };
@@ -170,6 +249,7 @@ export function AuthProvider({ children }) {
       signInWithEmail,
       signUpWithEmail,
       signOut,
+      deleteAccount,
       skipAuth,
       clearError,
     }}>

@@ -18,19 +18,39 @@ import {
   getWeeklyTrend,
 } from '../utils/helpers';
 
-const tooltipStyle = {
-  background: 'rgba(17,24,39,0.95)',
-  border: '1px solid rgba(255,255,255,0.1)',
-  borderRadius: '10px',
-  fontSize: '0.8rem',
-};
+import { useTheme } from '../context/ThemeContext';
+
+function useChartTheme() {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+  return {
+    isDark,
+    tooltipStyle: {
+      background: isDark ? 'rgba(17,24,39,0.96)' : 'rgba(255,255,255,0.98)',
+      border: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.12)'}`,
+      borderRadius: 10,
+      fontSize: '0.8rem',
+      color: isDark ? '#f1f5f9' : '#a6a8abff',
+      boxShadow: isDark ? '0 4px 20px rgba(0,0,0,0.4)' : '0 4px 20px rgba(0,0,0,0.12)',
+    },
+    itemStyle: {
+      color: isDark ? '#f1f5f9' : '#75777cff',
+    },
+    labelStyle: {
+      color: isDark ? '#cbd5e1' : '#64748b',
+    },
+    gridColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.07)',
+    axisColor: isDark ? '#cbd5e1' : '#64748b',
+    polarGridColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.1)',
+  };
+}
 
 export default function Analytics() {
   const { subjects, history } = useAttendance();
   const overall = getOverallPercentage(subjects);
   const weeklyTrend = getWeeklyTrend(history);
+  const { tooltipStyle, itemStyle, labelStyle, gridColor, axisColor, polarGridColor } = useChartTheme();
 
-  // Bar chart data
   const barData = useMemo(() => {
     return subjects.map((sub) => ({
       name: sub.code,
@@ -40,11 +60,9 @@ export default function Analytics() {
     }));
   }, [subjects]);
 
-  // Pie chart data — includes holiday count
   const pieData = useMemo(() => {
     let totalAttended = 0, totalMissed = 0, totalHoliday = 0;
     subjects.forEach((s) => { totalAttended += s.attended; totalMissed += (s.totalClasses - s.attended); });
-    // Count holidays from history
     Object.values(history).forEach((dayData) => {
       Object.values(dayData).forEach((rawStatus) => {
         const status = typeof rawStatus === 'string' ? rawStatus : rawStatus?.status;
@@ -58,7 +76,6 @@ export default function Analytics() {
     ].filter((d) => d.value > 0);
   }, [subjects, history]);
 
-  // Radar data
   const radarData = useMemo(() => {
     return subjects.map((sub) => ({
       subject: sub.code,
@@ -85,35 +102,57 @@ export default function Analytics() {
       <motion.div
         className="glass-card"
         style={{
-          padding: '24px 28px',
+          padding: '20px 24px',
           marginBottom: 20,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: 20,
           borderColor: overall >= 75 ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)',
         }}
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
       >
-        <div>
-          <p style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
-            Overall Attendance
-          </p>
-          <span className={getPctClass(overall)} style={{ fontSize: '2.5rem', fontWeight: 800, lineHeight: 1 }}>
-            {overall}%
-          </span>
-          <p style={{ fontSize: '0.82rem', color: 'var(--text-tertiary)', marginTop: 4 }}>
-            {overall >= 75 ? '✓ You are above the 75% threshold' : '⚠ Below 75% — attend more classes'}
-          </p>
+        {/* Top row: big % + threshold text */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+          <div>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>
+              Overall Attendance
+            </p>
+            <span className={getPctClass(overall)} style={{ fontSize: '2.5rem', fontWeight: 800, lineHeight: 1 }}>
+              {overall}%
+            </span>
+            <p style={{ fontSize: '0.82rem', color: 'var(--text-tertiary)', marginTop: 4 }}>
+              {overall >= 75 ? '✓ You are above the 75% threshold' : '⚠ Below 75% — attend more classes'}
+            </p>
+          </div>
+          {/* Overall progress ring */}
+          <div style={{ position: 'relative', width: 72, height: 72, flexShrink: 0 }}>
+            <svg width="72" height="72" viewBox="0 0 72 72">
+              <circle cx="36" cy="36" r="30" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="6" />
+              <circle cx="36" cy="36" r="30" fill="none"
+                stroke={overall >= 75 ? '#22c55e' : overall >= 60 ? '#eab308' : '#ef4444'}
+                strokeWidth="6"
+                strokeDasharray={`${(overall / 100) * 188.5} 188.5`}
+                strokeLinecap="round"
+                transform="rotate(-90 36 36)"
+                style={{ transition: 'stroke-dasharray 0.6s ease' }}
+              />
+              <text x="36" y="40" textAnchor="middle" fontSize="13" fontWeight="800" fill="currentColor" style={{ fill: 'var(--text-primary)' }}>{overall}%</text>
+            </svg>
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+
+        {/* Subject mini cards — scrollable row on mobile */}
+        <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
           {subjects.map((sub) => {
             const pct = getSubjectPercentage(sub);
             return (
-              <motion.div key={sub.id} style={{ textAlign: 'center' }} whileHover={{ scale: 1.1 }}>
-                <div className={getPctClass(pct)} style={{ fontSize: '1.1rem', fontWeight: 700 }}>{pct}%</div>
+              <motion.div key={sub.id}
+                style={{
+                  textAlign: 'center', padding: '8px 14px', borderRadius: 10, flexShrink: 0,
+                  background: sub.color + '10', border: `1px solid ${sub.color}25`,
+                  minWidth: 64,
+                }}
+                whileHover={{ scale: 1.05 }}
+              >
+                <div className={getPctClass(pct)} style={{ fontSize: '1rem', fontWeight: 700 }}>{pct}%</div>
                 <div style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', marginTop: 2 }}>{sub.code}</div>
               </motion.div>
             );
@@ -123,85 +162,93 @@ export default function Analytics() {
 
       {/* Charts Row 1 */}
       <div className="grid-2" style={{ marginBottom: 20 }}>
-        <div className="glass-card chart-container">
-          <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="glass-card analytics-chart-card">
+          <h3 style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.95rem', marginBottom: 16 }}>
             <BarChart3 size={18} style={{ color: 'var(--primary-400)' }} />
             Subject-wise Attendance
           </h3>
-          <ResponsiveContainer width="100%" height="85%">
-            <BarChart data={barData} barSize={36}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-              <XAxis dataKey="name" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis domain={[0, 100]} tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v) => [`${v}%`, 'Attendance']} />
-              <Bar dataKey="percentage" radius={[6, 6, 0, 0]}>
-                {barData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.fill} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+          <div style={{ height: 240 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={barData} barSize={28} margin={{ left: 5, right: 8, top: 4, bottom: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                <XAxis dataKey="name" tick={{ fill: axisColor, fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis domain={[0, 100]} tick={{ fill: axisColor, fontSize: 10 }} axisLine={false} tickLine={false} width={32} tickFormatter={(v) => `${v}%`} />
+                <Tooltip contentStyle={tooltipStyle} itemStyle={itemStyle} labelStyle={labelStyle} formatter={(v) => [`${v}%`, 'Attendance']} />
+                <Bar dataKey="percentage" radius={[6, 6, 0, 0]}>
+                  {barData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
-        <div className="glass-card chart-container">
-          <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="glass-card analytics-chart-card">
+          <h3 style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.95rem', marginBottom: 16 }}>
             <Target size={18} style={{ color: 'var(--accent-400)' }} />
             Attendance Radar
           </h3>
-          <ResponsiveContainer width="100%" height="85%">
-            <RadarChart data={radarData} outerRadius="70%">
-              <PolarGrid stroke="rgba(255,255,255,0.08)" />
-              <PolarAngleAxis dataKey="subject" tick={{ fill: '#94a3b8', fontSize: 11 }} />
-              <PolarRadiusAxis domain={[0, 100]} tick={{ fill: '#64748b', fontSize: 10 }} />
-              <Radar name="Attendance" dataKey="attendance" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.2} strokeWidth={2} />
-            </RadarChart>
-          </ResponsiveContainer>
+          <div style={{ height: 240 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <RadarChart data={radarData} outerRadius="70%" margin={{ left: 8, right: 8, top: 4, bottom: 4 }} style={{ background: 'transparent' }}>
+                <PolarGrid stroke={polarGridColor} />
+                <PolarAngleAxis dataKey="subject" tick={{ fill: axisColor, fontSize: 10 }} />
+                <PolarRadiusAxis domain={[0, 100]} tick={{ fill: axisColor, fontSize: 9 }} />
+                <Radar name="Attendance" dataKey="attendance" stroke="#8b5cf6" fill="#8b5cf6" fillOpacity={0.2} strokeWidth={2} />
+              </RadarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
 
       {/* Charts Row 2 */}
       <div className="grid-2" style={{ marginBottom: 20 }}>
-        <div className="glass-card chart-container">
-          <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="glass-card analytics-chart-card">
+          <h3 style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.95rem', marginBottom: 16 }}>
             <TrendingUp size={18} style={{ color: 'var(--success-400)' }} />
             Weekly Trend
           </h3>
-          <ResponsiveContainer width="100%" height="85%">
-            <LineChart data={weeklyTrend}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-              <XAxis dataKey="date" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis domain={[0, 100]} tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={tooltipStyle} formatter={(v) => [`${v}%`, 'Attendance']} />
-              <Line type="monotone" dataKey="percentage" stroke="#22c55e" strokeWidth={2.5} dot={{ fill: '#22c55e', strokeWidth: 0, r: 4 }} activeDot={{ r: 6 }} />
-            </LineChart>
-          </ResponsiveContainer>
+          <div style={{ height: 240 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={weeklyTrend} margin={{ left: 5, right: 8, top: 4, bottom: 4 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
+                <XAxis dataKey="date" tick={{ fill: axisColor, fontSize: 10 }} axisLine={false} tickLine={false} />
+                <YAxis domain={[0, 100]} tick={{ fill: axisColor, fontSize: 10 }} axisLine={false} tickLine={false} width={32} tickFormatter={(v) => `${v}%`} />
+                <Tooltip contentStyle={tooltipStyle} itemStyle={itemStyle} labelStyle={labelStyle} formatter={(v) => [`${v}%`, 'Attendance']} />
+                <Line type="monotone" dataKey="percentage" stroke="#22c55e" strokeWidth={2.5} dot={{ fill: '#22c55e', strokeWidth: 0, r: 4 }} activeDot={{ r: 6 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
-        <div className="glass-card chart-container">
-          <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="glass-card analytics-chart-card">
+          <h3 style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.95rem', marginBottom: 16 }}>
             📊 Attended vs Missed vs Holiday
           </h3>
-          <ResponsiveContainer width="100%" height="85%">
-            <PieChart>
-              <Pie data={pieData} cx="50%" cy="45%" innerRadius={55} outerRadius={90} paddingAngle={4} dataKey="value">
-                {pieData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.fill} />
-                ))}
-              </Pie>
-              <Tooltip contentStyle={tooltipStyle} />
-              <Legend verticalAlign="bottom" iconType="circle" wrapperStyle={{ fontSize: '0.75rem', color: '#94a3b8' }} />
-            </PieChart>
-          </ResponsiveContainer>
+          <div style={{ height: 240 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart margin={{ left: 0, right: 0, top: 0, bottom: 0 }} style={{ background: 'transparent' }}>
+                <Pie data={pieData} cx="50%" cy="45%" innerRadius="55%" outerRadius="80%" paddingAngle={4} dataKey="value">
+                  {pieData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.fill} />
+                  ))}
+                </Pie>
+                <Tooltip contentStyle={tooltipStyle} itemStyle={itemStyle} labelStyle={labelStyle} />
+                <Legend verticalAlign="bottom" iconType="circle" wrapperStyle={{ fontSize: '0.72rem', color: axisColor, paddingTop: 8 }} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
 
       {/* Detailed Table */}
-      <div className="glass-card" style={{ overflow: 'hidden' }}>
+      <div className="glass-card" style={{ overflow: 'hidden', marginBottom: 80 }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-primary)' }}>
           <h3 style={{ fontSize: '0.95rem', fontWeight: 600 }}>📋 Detailed Breakdown</h3>
         </div>
-        <div style={{ overflowX: 'auto' }}>
-          <table className="data-table" id="analytics-table">
+        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          <table className="data-table" id="analytics-table" style={{ minWidth: 600 }}>
             <thead>
               <tr>
                 <th>Subject</th>
@@ -225,7 +272,7 @@ export default function Analytics() {
                   <tr key={sub.id}>
                     <td style={{ color: 'var(--text-primary)', fontWeight: 500 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: sub.color }} />
+                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: sub.color, flexShrink: 0 }} />
                         {sub.name}
                       </div>
                     </td>
@@ -274,6 +321,29 @@ export default function Analytics() {
           </table>
         </div>
       </div>
+
+      <style>{`
+        .analytics-chart-card {
+          padding: 20px;
+          overflow: hidden;
+        }
+        .analytics-header-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          flex-wrap: wrap;
+          gap: 12px;
+          margin-bottom: 16px;
+        }
+        @media (max-width: 768px) {
+          .analytics-chart-card {
+            padding: 14px 12px;
+          }
+          .analytics-header-row {
+            gap: 8px;
+          }
+        }
+      `}</style>
     </motion.div>
   );
 }

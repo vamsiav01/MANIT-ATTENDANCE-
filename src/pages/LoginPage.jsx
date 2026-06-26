@@ -237,16 +237,14 @@ export default function LoginPage() {
           initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <motion.div
             style={{
-              width: 88, height: 88, borderRadius: 20,
-              background: 'linear-gradient(135deg, #3b82f6, #8b5cf6)',
+              width: 100, height: 100,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              margin: '0 auto 20px', color: 'white',
-              boxShadow: '0 0 60px rgba(59,130,246,0.4), 0 0 120px rgba(139,92,246,0.2)',
+              margin: '0 auto 20px',
             }}
-            animate={{ rotate: [0, -4, 4, 0], scale: [1, 1.03, 1] }}
+            animate={{ scale: [1, 1.03, 1] }}
             transition={{ duration: 5, repeat: Infinity, repeatDelay: 2 }}
           >
-            <GraduationCap size={44} />
+            <img src="/manit-logo.png" alt="MANIT Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', filter: 'drop-shadow(0 0 30px rgba(59,130,246,0.4))' }} />
           </motion.div>
           <h1 style={{ fontSize: '2rem', fontWeight: 800, background: 'linear-gradient(135deg, #60a5fa, #a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text', lineHeight: 1.2 }}>
             MANIT Attendance

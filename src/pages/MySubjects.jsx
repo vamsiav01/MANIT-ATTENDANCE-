@@ -62,16 +62,22 @@ export default function MySubjects() {
   const setDayPeriods = (day, value) => {
     setFormData((prev) => ({
       ...prev,
-      periodsPerDay: { ...prev.periodsPerDay, [day]: Math.max(1, Number(value) || 1) },
+      periodsPerDay: { ...prev.periodsPerDay, [day]: value === '' ? '' : Math.max(1, Number(value) || 1) },
     }));
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!formData.name.trim() || !formData.code.trim()) return;
+    if (!formData.name.trim()) return;
+    // Convert empty periods back to 1 for payload
+    const finalPeriodsPerDay = { ...formData.periodsPerDay };
+    Object.keys(finalPeriodsPerDay).forEach(day => {
+      if (finalPeriodsPerDay[day] === '') finalPeriodsPerDay[day] = 1;
+    });
+
     const payload = {
       name: formData.name, code: formData.code, teacher: formData.teacher,
-      days: formData.days, periodsPerDay: formData.periodsPerDay,
+      days: formData.days, periodsPerDay: finalPeriodsPerDay,
       totalClasses: Number(formData.totalClasses), attended: Number(formData.attended),
     };
     if (editingSub) {
@@ -88,24 +94,6 @@ export default function MySubjects() {
 
   const handleDelete = (id) => {
     if (window.confirm('Remove this subject?')) deleteSubject(id);
-  };
-
-  // Confetti burst state
-  const [confettiSubId, setConfettiSubId] = useState(null);
-
-  const triggerConfetti = useCallback((subId) => {
-    setConfettiSubId(subId);
-    setTimeout(() => setConfettiSubId(null), 800);
-  }, []);
-
-  const quickIncrement = (subId, field) => {
-    const sub = subjects.find((s) => s.id === subId);
-    if (!sub) return;
-    if (field === 'attended') {
-      updateSubject(subId, { attended: sub.attended + 1, totalClasses: sub.totalClasses + 1 });
-      triggerConfetti(subId);
-    }
-    else if (field === 'absent') updateSubject(subId, { totalClasses: sub.totalClasses + 1 });
   };
 
   // Stagger animation variants
@@ -169,12 +157,12 @@ export default function MySubjects() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
-        <div className="page-header" style={{ marginBottom: 16 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 24 }}>
+        <div className="page-header" style={{ marginBottom: 0 }}>
           <h1>My Subjects</h1>
           <p>Manage your subjects and track attendance for each one.</p>
         </div>
-        <motion.button className="btn btn-primary" onClick={openAdd} id="add-subject-btn" whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}>
+        <motion.button className="btn btn-primary" onClick={openAdd} id="add-subject-btn" style={{ width: '100%', justifyContent: 'center' }} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
           <Plus size={16} /> Add Subject
         </motion.button>
       </div>
@@ -252,48 +240,12 @@ export default function MySubjects() {
                   <span>✗ Missed: <strong style={{ color: 'var(--danger-400)' }}>{sub.totalClasses - sub.attended}</strong></span>
                 </div>
 
-                <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-sm)', background: pct >= 75 ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)', border: `1px solid ${pct >= 75 ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)'}`, display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.82rem', marginBottom: 14 }}>
+                <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-sm)', background: pct >= 75 ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)', border: `1px solid ${pct >= 75 ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)'}`, display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.82rem', marginBottom: 0 }}>
                   {pct >= 75 ? (
                     <><TrendingUp size={16} style={{ color: 'var(--success-400)' }} /><span style={{ color: 'var(--success-400)', fontWeight: 600 }}>Can miss {canMiss} more class{canMiss !== 1 ? 'es' : ''}</span></>
                   ) : (
                     <><TrendingDown size={16} style={{ color: 'var(--danger-400)' }} /><span style={{ color: 'var(--danger-400)', fontWeight: 600 }}>Attend {needed} consecutive class{needed !== 1 ? 'es' : ''} to reach 75%</span></>
                   )}
-                </div>
-
-                <div style={{ display: 'flex', gap: 8, position: 'relative' }}>
-                  <motion.button className="btn btn-success btn-sm" style={{ flex: 1 }} onClick={() => quickIncrement(sub.id, 'attended')} whileHover={{ scale: 1.05, boxShadow: '0 0 20px rgba(34,197,94,0.3)' }} whileTap={{ scale: 0.93 }}>
-                    <Check size={14} /> Attended
-                  </motion.button>
-                  <motion.button className="btn btn-danger btn-sm" style={{ flex: 1 }} onClick={() => quickIncrement(sub.id, 'absent')} whileHover={{ scale: 1.05, boxShadow: '0 0 20px rgba(239,68,68,0.3)' }} whileTap={{ scale: 0.93 }}>
-                    <X size={14} /> Absent
-                  </motion.button>
-                  {/* Confetti burst effect */}
-                  <AnimatePresence>
-                    {confettiSubId === sub.id && (
-                      <>
-                        {[...Array(8)].map((_, i) => (
-                          <motion.div
-                            key={`confetti-${i}`}
-                            style={{
-                              position: 'absolute', width: 6, height: 6, borderRadius: i % 2 === 0 ? '50%' : '2px',
-                              background: ['#22c55e', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6', '#14b8a6', '#f97316', '#ef4444'][i],
-                              left: '25%', top: '50%', zIndex: 10,
-                            }}
-                            initial={{ scale: 0, x: 0, y: 0, opacity: 1 }}
-                            animate={{
-                              scale: [0, 1.5, 0.8],
-                              x: (Math.cos((i * Math.PI) / 4) * 50) + (Math.random() * 20 - 10),
-                              y: (Math.sin((i * Math.PI) / 4) * 40) + (Math.random() * 20 - 10),
-                              opacity: [1, 1, 0],
-                              rotate: Math.random() * 360,
-                            }}
-                            exit={{ opacity: 0 }}
-                            transition={{ duration: 0.6, ease: 'easeOut' }}
-                          />
-                        ))}
-                      </>
-                    )}
-                  </AnimatePresence>
                 </div>
               </motion.div>
             );
@@ -330,10 +282,10 @@ export default function MySubjects() {
                     <input type="text" className="form-input" placeholder="e.g. Compiler Design" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required id="subject-name-input" />
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div className="grid-2" style={{ gap: 12 }}>
                     <div className="form-group">
-                      <label className="form-label">Subject Code</label>
-                      <input type="text" className="form-input" placeholder="e.g. CS401" value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value })} required id="subject-code-input" />
+                      <label className="form-label">Subject Code (Optional)</label>
+                      <input type="text" className="form-input" placeholder="e.g. CS401" value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value })} id="subject-code-input" />
                     </div>
                     <div className="form-group">
                       <label className="form-label">Teacher Name</label>
@@ -360,30 +312,29 @@ export default function MySubjects() {
                     </div>
                   </div>
 
-                  {/* Days + Per-Day Periods */}
                   <div className="form-group">
                     <label className="form-label">Days & Periods Per Day</label>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
                       {DAYS_OF_WEEK.map((day) => {
                         const isSelected = formData.days.includes(day);
                         return (
-                          <div key={day} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <label className={`day-checkbox ${isSelected ? 'selected' : ''}`} style={{ flex: '1 1 auto', margin: 0 }}>
-                              <input type="checkbox" checked={isSelected} onChange={() => toggleDay(day)} />
-                              <div className="day-check-indicator">
+                          <div key={day} style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', padding: '6px 8px', borderRadius: 8, background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-primary)' }}>
+                            <label className={`day-checkbox ${isSelected ? 'selected' : ''}`} style={{ flex: '1 1 auto', margin: 0, minWidth: '80px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <input type="checkbox" checked={isSelected} onChange={() => toggleDay(day)} style={{ display: 'none' }} />
+                              <div className="day-check-indicator" style={{ width: 16, height: 16, borderRadius: 4, border: '1px solid var(--text-tertiary)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: isSelected ? 'var(--primary-500)' : 'transparent' }}>
                                 {isSelected && <Check size={12} color="white" />}
                               </div>
-                              <span>{day}</span>
+                              <span style={{ fontSize: '0.85rem' }}>{day}</span>
                             </label>
                             {isSelected && (
-                              <motion.div initial={{ opacity: 0, width: 0 }} animate={{ opacity: 1, width: 'auto' }} exit={{ opacity: 0, width: 0 }}
-                                style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                              <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }}
+                                style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}
                               >
                                 <span style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>Periods:</span>
                                 <input type="number" className="form-input" min="1" max="6"
-                                  value={formData.periodsPerDay[day] || 1}
+                                  value={formData.periodsPerDay[day] !== undefined ? formData.periodsPerDay[day] : 1}
                                   onChange={(e) => setDayPeriods(day, e.target.value)}
-                                  style={{ width: 56, padding: '4px 8px', textAlign: 'center', fontSize: '0.82rem' }}
+                                  style={{ width: 44, padding: '4px 6px', textAlign: 'center', fontSize: '0.82rem', height: 28 }}
                                 />
                               </motion.div>
                             )}
@@ -393,7 +344,7 @@ export default function MySubjects() {
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <div className="grid-2" style={{ gap: 12 }}>
                     <div className="form-group">
                       <label className="form-label">Total Classes</label>
                       <input type="number" className="form-input" min="0" value={formData.totalClasses} onChange={(e) => setFormData({ ...formData, totalClasses: e.target.value })} id="total-classes-input" />

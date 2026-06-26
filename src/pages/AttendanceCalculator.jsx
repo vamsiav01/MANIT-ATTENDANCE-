@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Calculator, Target, Sparkles, AlertTriangle, RotateCcw,
   BookOpen, ArrowRight, TrendingUp, TrendingDown, CheckCircle2,
@@ -10,13 +10,44 @@ import {
   getSubjectPercentage, classesCanMiss, classesNeeded,
   getPctClass, getProgressClass, getOverallPercentage,
 } from '../utils/helpers';
+import Confetti from 'react-confetti';
 
 const fadeIn = { hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } };
 
 export default function AttendanceCalculator() {
-  const { subjects } = useAttendance();
+  const { subjects, schedule } = useAttendance();
   const [targetPct, setTargetPct] = useState(75);
   const [simulations, setSimulations] = useState({});
+  const [tab, setTab] = useState('standard');
+  const [vacationStart, setVacationStart] = useState('');
+  const [vacationEnd, setVacationEnd] = useState('');
+
+  const calculateVacation = () => {
+    if (!vacationStart || !vacationEnd) return;
+    const start = new Date(vacationStart);
+    const end = new Date(vacationEnd);
+    if (end < start) return alert("End date must be after start date");
+
+    const newSim = {};
+    const daysMap = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    
+    let current = new Date(start);
+    while (current <= end) {
+      const dayName = daysMap[current.getDay()];
+      const dailySubs = schedule[dayName] || [];
+      
+      dailySubs.forEach(subId => {
+        const sub = subjects.find(s => s.id === subId);
+        if (sub) {
+          const periods = typeof sub.periodsPerDay === 'object' ? (sub.periodsPerDay[dayName] || 1) : (sub.periodsPerDay || 1);
+          if (!newSim[subId]) newSim[subId] = { futureAttend: 0, futureMiss: 0 };
+          newSim[subId].futureMiss += periods;
+        }
+      });
+      current.setDate(current.getDate() + 1);
+    }
+    setSimulations(newSim);
+  };
 
   const getSim = (subId) => simulations[subId] || { futureAttend: 0, futureMiss: 0 };
 
@@ -61,47 +92,81 @@ export default function AttendanceCalculator() {
   const meetingCount = results.filter((r) => r.meetsTarget).length;
   const hasSimulations = Object.keys(simulations).length > 0;
 
+  const [showConfetti, setShowConfetti] = useState(false);
+
+  React.useEffect(() => {
+    if (hasSimulations && simulatedOverall >= targetPct && simulatedOverall > currentOverall) {
+      setShowConfetti(true);
+      const timer = setTimeout(() => setShowConfetti(false), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [simulatedOverall, targetPct, hasSimulations, currentOverall]);
+
   return (
     <motion.div initial="hidden" animate="visible" variants={{ visible: { transition: { staggerChildren: 0.05 } } }}>
+      {showConfetti && <Confetti recycle={false} numberOfPieces={400} style={{ position: 'fixed', inset: 0, zIndex: 9999, pointerEvents: 'none' }} />}
       {/* ===== HEADER ===== */}
-      <motion.div variants={fadeIn} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
+      <motion.div variants={fadeIn} className="calc-header-row">
         <div className="page-header" style={{ marginBottom: 0 }}>
           <h1 style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{
               width: 40, height: 40, borderRadius: 12,
               background: 'linear-gradient(135deg, var(--primary-500), var(--accent-500))',
               display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white',
-              boxShadow: '0 0 20px rgba(59,130,246,0.2)',
+              boxShadow: '0 0 20px rgba(59,130,246,0.2)', flexShrink: 0,
             }}>
               <Calculator size={20} />
             </div>
             Attendance Calculator
           </h1>
           <p>"What if" simulator — plan future classes and see your projected attendance.</p>
+          
+          <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+            <button className={`btn ${tab === 'standard' ? 'btn-primary' : 'btn-outline'}`} onClick={() => setTab('standard')} style={{ fontSize: '0.8rem' }}>Standard Mode</button>
+            <button className={`btn ${tab === 'vacation' ? 'btn-primary' : 'btn-outline'}`} onClick={() => { setTab('vacation'); setSimulations({}); }} style={{ fontSize: '0.8rem' }}>🏖️ Vacation Mode</button>
+          </div>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
           {hasSimulations && (
             <motion.button className="btn btn-outline" onClick={resetAll}
               whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
               initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}>
-              <RotateCcw size={14} /> Reset All
+              <RotateCcw size={14} /> Reset
             </motion.button>
           )}
         </div>
       </motion.div>
 
+      {/* ===== VACATION PANEL ===== */}
+      <AnimatePresence>
+        {tab === 'vacation' && (
+          <motion.div initial={{ opacity: 0, height: 0, marginBottom: 0 }} animate={{ opacity: 1, height: 'auto', marginBottom: 20 }} exit={{ opacity: 0, height: 0, marginBottom: 0 }} style={{ overflow: 'hidden' }}>
+            <div className="glass-card" style={{ padding: 20, display: 'flex', alignItems: 'flex-end', gap: 16, flexWrap: 'wrap', border: '1px solid var(--primary-500)', background: 'linear-gradient(135deg, rgba(59,130,246,0.05), transparent)' }}>
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: 6 }}>Start Date</label>
+                <input type="date" value={vacationStart} onChange={(e) => setVacationStart(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', color: 'white', outline: 'none' }} />
+              </div>
+              <div style={{ flex: 1, minWidth: 200 }}>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-tertiary)', marginBottom: 6 }}>End Date</label>
+                <input type="date" value={vacationEnd} onChange={(e) => setVacationEnd(e.target.value)} style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border-primary)', background: 'var(--bg-secondary)', color: 'white', outline: 'none' }} />
+              </div>
+              <button className="btn btn-primary" onClick={calculateVacation} style={{ height: 42 }}>
+                Simulate Impact
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* ===== STATS BAR ===== */}
-      <motion.div variants={fadeIn} style={{
-        display: 'grid', gridTemplateColumns: 'auto 1fr auto auto', gap: 16,
-        marginBottom: 24, alignItems: 'stretch',
-      }}>
-        {/* Target Selector */}
-        <div className="glass-card" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+      <motion.div variants={fadeIn} className="calc-stats-grid">
+        {/* Row 1 — Target Selector (full width always) */}
+        <div className="glass-card calc-target-card">
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
             <Target size={14} style={{ color: 'var(--primary-400)' }} />
-            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Target</span>
+            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Target %</span>
           </div>
-          <div style={{ display: 'flex', gap: 4 }}>
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
             {[60, 65, 70, 75, 80, 85].map((pct) => (
               <motion.button key={pct} onClick={() => setTargetPct(pct)}
                 style={{
@@ -117,11 +182,11 @@ export default function AttendanceCalculator() {
           </div>
         </div>
 
-        {/* Big Overall Comparison */}
-        <div className="glass-card" style={{ padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20 }}>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Current</div>
-            <span className={getPctClass(currentOverall)} style={{ fontSize: '1.8rem', fontWeight: 800 }}>{currentOverall}%</span>
+        {/* Row 2 — Overall Comparison (full width always) */}
+        <div className="glass-card calc-overall-card">
+          <div className="calc-stat-block">
+            <div className="calc-stat-label">Current</div>
+            <span className={`${getPctClass(currentOverall)} calc-stat-num`}>{currentOverall}%</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
             <ArrowRight size={20} style={{ color: hasSimulations ? 'var(--primary-400)' : 'var(--text-tertiary)', opacity: hasSimulations ? 1 : 0.3 }} />
@@ -135,33 +200,32 @@ export default function AttendanceCalculator() {
               </span>
             )}
           </div>
-          <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Simulated</div>
-            <span className={getPctClass(simulatedOverall)} style={{ fontSize: '1.8rem', fontWeight: 800 }}>{simulatedOverall}%</span>
+          <div className="calc-stat-block">
+            <div className="calc-stat-label">Simulated</div>
+            <span className={`${getPctClass(simulatedOverall)} calc-stat-num`}>{simulatedOverall}%</span>
           </div>
         </div>
 
-        {/* Meeting Target */}
-        <div className="glass-card" style={{ padding: '16px 20px', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: 90 }}>
-          <div style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Meeting</div>
-          <span style={{
-            fontSize: '1.8rem', fontWeight: 800,
+        {/* Row 3 — Meeting Target */}
+        <div className="glass-card calc-mini-stat">
+          <div className="calc-stat-label">Meeting Target</div>
+          <span className="calc-stat-num" style={{
             color: meetingCount === subjects.length ? 'var(--success-400)' : meetingCount === 0 ? 'var(--danger-400)' : 'var(--warning-400)',
           }}>
             {meetingCount}<span style={{ fontSize: '0.9rem', color: 'var(--text-tertiary)' }}>/{subjects.length}</span>
           </span>
         </div>
 
-        {/* Quick Info */}
-        <div className="glass-card" style={{ padding: '16px 20px', textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center', minWidth: 90 }}>
-          <div style={{ fontSize: '0.6rem', color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 4 }}>Required</div>
-          <span style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--primary-400)' }}>{targetPct}%</span>
+        {/* Row 3 — Required */}
+        <div className="glass-card calc-mini-stat">
+          <div className="calc-stat-label">Required</div>
+          <span className="calc-stat-num" style={{ color: 'var(--primary-400)' }}>{targetPct}%</span>
         </div>
       </motion.div>
 
-      {/* ===== SUBJECT TABLE ===== */}
-      <motion.div variants={fadeIn} className="glass-card" style={{ padding: 0, overflow: 'hidden', marginBottom: 20 }}>
-        {/* Table Header */}
+      {/* ===== SUBJECT CARDS — DESKTOP TABLE / MOBILE CARDS ===== */}
+      {/* Desktop Table */}
+      <motion.div variants={fadeIn} className="glass-card calc-table-desktop" style={{ padding: 0, overflow: 'hidden', marginBottom: 20 }}>
         <div style={{
           display: 'grid', gridTemplateColumns: '2.5fr 1fr 1.5fr 1.5fr 1fr 2fr',
           padding: '14px 20px', gap: 12,
@@ -177,8 +241,7 @@ export default function AttendanceCalculator() {
           <span>Status</span>
         </div>
 
-        {/* Table Rows */}
-        {results.map((res, idx) => {
+        {results.map((res) => {
           const hasSim = res.sim.futureAttend > 0 || res.sim.futureMiss > 0;
           return (
             <motion.div
@@ -188,35 +251,20 @@ export default function AttendanceCalculator() {
                 display: 'grid', gridTemplateColumns: '2.5fr 1fr 1.5fr 1.5fr 1fr 2fr',
                 padding: '14px 20px', gap: 12, alignItems: 'center',
                 borderBottom: '1px solid var(--border-primary)',
-                background: hasSim
-                  ? (res.meetsTarget ? 'rgba(34,197,94,0.03)' : 'rgba(239,68,68,0.03)')
-                  : 'transparent',
-                transition: 'background 0.2s ease',
+                background: hasSim ? (res.meetsTarget ? 'rgba(34,197,94,0.03)' : 'rgba(239,68,68,0.03)') : 'transparent',
               }}
             >
-              {/* Subject Name */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{
-                  width: 8, height: 8, borderRadius: '50%', background: res.color, flexShrink: 0,
-                  boxShadow: `0 0 6px ${res.color}60`,
-                }} />
+                <div style={{ width: 8, height: 8, borderRadius: '50%', background: res.color, flexShrink: 0, boxShadow: `0 0 6px ${res.color}60` }} />
                 <div>
                   <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>{res.code}</div>
                   <div style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)' }}>{res.name}</div>
                 </div>
               </div>
-
-              {/* Current % */}
               <div style={{ textAlign: 'center' }}>
-                <span className={getPctClass(res.currentPct)} style={{ fontWeight: 700, fontSize: '0.92rem' }}>
-                  {res.currentPct}%
-                </span>
-                <div style={{ fontSize: '0.62rem', color: 'var(--text-tertiary)' }}>
-                  {res.attended}/{res.totalClasses}
-                </div>
+                <span className={getPctClass(res.currentPct)} style={{ fontWeight: 700, fontSize: '0.92rem' }}>{res.currentPct}%</span>
+                <div style={{ fontSize: '0.62rem', color: 'var(--text-tertiary)' }}>{res.attended}/{res.totalClasses}</div>
               </div>
-
-              {/* + Attend counter */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
                 <motion.button onClick={() => updateSim(res.id, 'futureAttend', -1)}
                   style={{ width: 28, height: 28, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.15)', color: 'var(--success-400)', cursor: 'pointer' }}
@@ -225,20 +273,13 @@ export default function AttendanceCalculator() {
                 </motion.button>
                 <input type="number" min="0" value={res.sim.futureAttend || ''} placeholder="0"
                   onChange={(e) => setSimValue(res.id, 'futureAttend', e.target.value)}
-                  style={{
-                    width: 44, textAlign: 'center', fontSize: '0.95rem', fontWeight: 700,
-                    padding: '4px', borderRadius: 6, border: '1px solid rgba(34,197,94,0.2)',
-                    background: res.sim.futureAttend > 0 ? 'rgba(34,197,94,0.06)' : 'transparent',
-                    color: 'var(--success-400)', outline: 'none',
-                  }} />
+                  style={{ width: 44, textAlign: 'center', fontSize: '0.95rem', fontWeight: 700, padding: '4px', borderRadius: 6, border: '1px solid rgba(34,197,94,0.2)', background: res.sim.futureAttend > 0 ? 'rgba(34,197,94,0.06)' : 'transparent', color: 'var(--success-400)', outline: 'none' }} />
                 <motion.button onClick={() => updateSim(res.id, 'futureAttend', 1)}
                   style={{ width: 28, height: 28, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.15)', color: 'var(--success-400)', cursor: 'pointer' }}
                   whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.85 }}>
                   <PlusCircle size={14} />
                 </motion.button>
               </div>
-
-              {/* + Miss counter */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
                 <motion.button onClick={() => updateSim(res.id, 'futureMiss', -1)}
                   style={{ width: 28, height: 28, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.15)', color: 'var(--danger-400)', cursor: 'pointer' }}
@@ -247,53 +288,134 @@ export default function AttendanceCalculator() {
                 </motion.button>
                 <input type="number" min="0" value={res.sim.futureMiss || ''} placeholder="0"
                   onChange={(e) => setSimValue(res.id, 'futureMiss', e.target.value)}
-                  style={{
-                    width: 44, textAlign: 'center', fontSize: '0.95rem', fontWeight: 700,
-                    padding: '4px', borderRadius: 6, border: '1px solid rgba(239,68,68,0.2)',
-                    background: res.sim.futureMiss > 0 ? 'rgba(239,68,68,0.06)' : 'transparent',
-                    color: 'var(--danger-400)', outline: 'none',
-                  }} />
+                  style={{ width: 44, textAlign: 'center', fontSize: '0.95rem', fontWeight: 700, padding: '4px', borderRadius: 6, border: '1px solid rgba(239,68,68,0.2)', background: res.sim.futureMiss > 0 ? 'rgba(239,68,68,0.06)' : 'transparent', color: 'var(--danger-400)', outline: 'none' }} />
                 <motion.button onClick={() => updateSim(res.id, 'futureMiss', 1)}
                   style={{ width: 28, height: 28, borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.15)', color: 'var(--danger-400)', cursor: 'pointer' }}
                   whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.85 }}>
                   <PlusCircle size={14} />
                 </motion.button>
               </div>
-
-              {/* New % */}
               <div style={{ textAlign: 'center' }}>
-                <span className={getPctClass(res.newPct)} style={{ fontWeight: 800, fontSize: '1.1rem' }}>
-                  {res.newPct}%
-                </span>
+                <span className={getPctClass(res.newPct)} style={{ fontWeight: 800, fontSize: '1.1rem' }}>{res.newPct}%</span>
                 {res.change !== 0 && (
-                  <div style={{
-                    fontSize: '0.62rem', fontWeight: 700,
-                    color: res.change > 0 ? 'var(--success-400)' : 'var(--danger-400)',
-                  }}>
+                  <div style={{ fontSize: '0.62rem', fontWeight: 700, color: res.change > 0 ? 'var(--success-400)' : 'var(--danger-400)' }}>
                     {res.change > 0 ? '↑' : '↓'}{Math.abs(res.change)}%
                   </div>
                 )}
               </div>
-
-              {/* Status */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 {res.meetsTarget ? (
                   <>
                     <CheckCircle2 size={15} style={{ color: 'var(--success-400)', flexShrink: 0 }} />
-                    <span style={{ fontSize: '0.78rem', color: 'var(--success-400)', fontWeight: 600 }}>
-                      Can miss {res.canMiss}
-                    </span>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--success-400)', fontWeight: 600 }}>Can miss {res.canMiss}</span>
                   </>
                 ) : (
                   <>
                     <XCircle size={15} style={{ color: 'var(--danger-400)', flexShrink: 0 }} />
-                    <span style={{ fontSize: '0.78rem', color: 'var(--danger-400)', fontWeight: 600 }}>
-                      Need {res.need} more
-                    </span>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--danger-400)', fontWeight: 600 }}>Need {res.need} more</span>
                   </>
                 )}
               </div>
             </motion.div>
+          );
+        })}
+      </motion.div>
+
+      {/* Mobile Cards Layout */}
+      <motion.div variants={fadeIn} className="calc-cards-mobile" style={{ marginBottom: 20, flexDirection: 'column', gap: 12, width: '100%' }}>
+        {results.map((res) => {
+          const hasSim = res.sim.futureAttend > 0 || res.sim.futureMiss > 0;
+          return (
+            <div key={res.id} className="glass-card" style={{
+              padding: '16px',
+              width: '100%',
+              boxSizing: 'border-box',
+              overflow: 'hidden',
+              borderColor: hasSim ? (res.meetsTarget ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)') : 'var(--border-primary)',
+            }}>
+              {/* Card Header */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: res.color, boxShadow: `0 0 8px ${res.color}70` }} />
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '0.92rem' }}>{res.code}</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>{res.name}</div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.58rem', color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Now</div>
+                    <span className={getPctClass(res.currentPct)} style={{ fontWeight: 700, fontSize: '1rem' }}>{res.currentPct}%</span>
+                  </div>
+                  <ArrowRight size={16} style={{ color: hasSim ? 'var(--primary-400)' : 'var(--text-tertiary)', opacity: hasSim ? 1 : 0.3 }} />
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '0.58rem', color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>New</div>
+                    <span className={getPctClass(res.newPct)} style={{ fontWeight: 800, fontSize: '1rem' }}>{res.newPct}%</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Simulators */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+                {/* Attend */}
+                <div style={{ background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.15)', borderRadius: 10, padding: '10px 8px', minWidth: 0, overflow: 'hidden' }}>
+                  <div style={{ fontSize: '0.62rem', color: 'var(--success-400)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>+ Attend</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <motion.button onClick={() => updateSim(res.id, 'futureAttend', -1)}
+                      style={{ width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)', color: 'var(--success-400)', cursor: 'pointer', flexShrink: 0 }}
+                      whileTap={{ scale: 0.85 }}>
+                      <MinusCircle size={16} />
+                    </motion.button>
+                    <input type="number" min="0" value={res.sim.futureAttend || ''} placeholder="0"
+                      onChange={(e) => setSimValue(res.id, 'futureAttend', e.target.value)}
+                      style={{ flex: 1, textAlign: 'center', fontSize: '1.1rem', fontWeight: 700, padding: '4px', borderRadius: 6, border: '1px solid rgba(34,197,94,0.2)', background: 'transparent', color: 'var(--success-400)', outline: 'none', minWidth: 0 }} />
+                    <motion.button onClick={() => updateSim(res.id, 'futureAttend', 1)}
+                      style={{ width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)', color: 'var(--success-400)', cursor: 'pointer', flexShrink: 0 }}
+                      whileTap={{ scale: 0.85 }}>
+                      <PlusCircle size={16} />
+                    </motion.button>
+                  </div>
+                </div>
+                {/* Miss */}
+                <div style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.15)', borderRadius: 10, padding: '10px 8px', minWidth: 0, overflow: 'hidden' }}>
+                  <div style={{ fontSize: '0.62rem', color: 'var(--danger-400)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>+ Miss</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <motion.button onClick={() => updateSim(res.id, 'futureMiss', -1)}
+                      style={{ width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: 'var(--danger-400)', cursor: 'pointer', flexShrink: 0 }}
+                      whileTap={{ scale: 0.85 }}>
+                      <MinusCircle size={16} />
+                    </motion.button>
+                    <input type="number" min="0" value={res.sim.futureMiss || ''} placeholder="0"
+                      onChange={(e) => setSimValue(res.id, 'futureMiss', e.target.value)}
+                      style={{ flex: 1, textAlign: 'center', fontSize: '1.1rem', fontWeight: 700, padding: '4px', borderRadius: 6, border: '1px solid rgba(239,68,68,0.2)', background: 'transparent', color: 'var(--danger-400)', outline: 'none', minWidth: 0 }} />
+                    <motion.button onClick={() => updateSim(res.id, 'futureMiss', 1)}
+                      style={{ width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: 'var(--danger-400)', cursor: 'pointer', flexShrink: 0 }}
+                      whileTap={{ scale: 0.85 }}>
+                      <PlusCircle size={16} />
+                    </motion.button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Status bar */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 12px', borderRadius: 8, background: res.meetsTarget ? 'rgba(34,197,94,0.06)' : 'rgba(239,68,68,0.06)', border: `1px solid ${res.meetsTarget ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)'}` }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {res.meetsTarget ? (
+                    <CheckCircle2 size={15} style={{ color: 'var(--success-400)' }} />
+                  ) : (
+                    <XCircle size={15} style={{ color: 'var(--danger-400)' }} />
+                  )}
+                  <span style={{ fontSize: '0.8rem', fontWeight: 600, color: res.meetsTarget ? 'var(--success-400)' : 'var(--danger-400)' }}>
+                    {res.meetsTarget ? `Can skip ${res.canMiss} classes` : `Attend ${res.need} more classes`}
+                  </span>
+                </div>
+                {res.change !== 0 && (
+                  <span style={{ fontSize: '0.72rem', fontWeight: 700, color: res.change > 0 ? 'var(--success-400)' : 'var(--danger-400)' }}>
+                    {res.change > 0 ? '↑' : '↓'}{Math.abs(res.change)}%
+                  </span>
+                )}
+              </div>
+            </div>
           );
         })}
       </motion.div>
@@ -304,7 +426,7 @@ export default function AttendanceCalculator() {
           <Info size={16} style={{ color: 'var(--accent-400)' }} />
           <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>How It Works</span>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+        <div className="calc-how-grid">
           {[
             { icon: <Target size={16} />, title: '1. Set Target', desc: 'Choose target % (MANIT needs 75%)' },
             { icon: <Calculator size={16} />, title: '2. Simulate', desc: 'Use +/- buttons to add future classes' },
@@ -329,14 +451,8 @@ export default function AttendanceCalculator() {
         </div>
       </motion.div>
 
-      {/* Responsive styles for smaller screens */}
-      <style>{`
-        @media (max-width: 900px) {
-          .glass-card [style*="gridTemplateColumns: '2.5fr"] {
-            grid-template-columns: 1fr !important;
-          }
-        }
-      `}</style>
+
+
     </motion.div>
   );
 }

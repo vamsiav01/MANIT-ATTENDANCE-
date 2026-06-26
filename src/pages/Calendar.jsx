@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, X } from 'lucide-react';
 import { useAttendance } from '../context/AttendanceContext';
@@ -8,11 +8,13 @@ const MONTH_NAMES = ['January','February','March','April','May','June','July','A
 const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
 export default function CalendarPage() {
-  const { subjects, history } = useAttendance();
+  const { subjects, history, schedule, markPresent, markAbsent, markHoliday, undoMark } = useAttendance();
   const today = new Date();
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [selectedDate, setSelectedDate] = useState(null);
+  const detailRef = useRef(null);
+
 
   const daysInMonth = getDaysInMonth(currentYear, currentMonth);
   const firstDay = getFirstDayOfMonth(currentYear, currentMonth);
@@ -54,20 +56,47 @@ export default function CalendarPage() {
 
   const selectedData = useMemo(() => {
     if (!selectedDate) return null;
-    const dayHistory = history[selectedDate];
-    if (!dayHistory) return { entries: [], present: 0, absent: 0, holiday: 0 };
-    const entries = Object.entries(dayHistory).map(([subId, rawStatus]) => {
+    
+    // Parse selectedDate (YYYY-MM-DD) carefully
+    const [y, m, d] = selectedDate.split('-');
+    const dateObj = new Date(y, m - 1, d);
+    const dayOfWeekName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
+    
+    const dayHistory = history[selectedDate] || {};
+    const scheduledIds = schedule[dayOfWeekName] || [];
+    
+    // Merge scheduled subjects + any extra subjects marked that day
+    const allIds = Array.from(new Set([...scheduledIds, ...Object.keys(dayHistory)]));
+    
+    const entries = allIds.map((subId) => {
       const sub = subjects.find((s) => s.id === subId);
-      const status = typeof rawStatus === 'string' ? rawStatus : rawStatus?.status;
-      return { subId, status, subject: sub };
-    }).filter((e) => e.subject);
+      if (!sub) return null;
+      
+      const rawStatus = dayHistory[subId];
+      const status = rawStatus 
+        ? (typeof rawStatus === 'string' ? rawStatus : rawStatus.status) 
+        : 'unmarked';
+        
+      let periods = 1;
+      if (rawStatus && typeof rawStatus === 'object') {
+        periods = rawStatus.periods || 1;
+      } else {
+        const ppd = sub.periodsPerDay;
+        if (typeof ppd === 'number') periods = ppd;
+        else if (ppd && typeof ppd === 'object' && ppd[dayOfWeekName]) periods = ppd[dayOfWeekName];
+      }
+      
+      return { subId, status, periods, subject: sub };
+    }).filter(Boolean);
+
     return {
       entries,
       present: entries.filter((e) => e.status === 'present').length,
       absent: entries.filter((e) => e.status === 'absent').length,
       holiday: entries.filter((e) => e.status === 'holiday').length,
+      unmarked: entries.filter((e) => e.status === 'unmarked').length,
     };
-  }, [selectedDate, history, subjects]);
+  }, [selectedDate, history, subjects, schedule]);
 
   const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
@@ -93,12 +122,12 @@ export default function CalendarPage() {
         <p>Your attendance history at a glance. Click any day to see details.</p>
       </div>
 
-      <div className="glass-card" style={{ padding: 24 }}>
+      <div className="glass-card calendar-card" style={{ padding: 24 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
           <motion.button className="btn btn-ghost" onClick={prevMonth} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}>
             <ChevronLeft size={20} />
           </motion.button>
-          <h2 style={{ fontSize: '1.2rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <h2 className="calendar-header" style={{ fontSize: '1.2rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 10 }}>
             <CalendarIcon size={20} style={{ color: 'var(--primary-400)' }} />
             {MONTH_NAMES[currentMonth]} {currentYear}
           </h2>
@@ -123,7 +152,15 @@ export default function CalendarPage() {
             return (
               <motion.div
                 key={cell.dateKey}
-                onClick={() => setSelectedDate(cell.dateKey)}
+                onClick={() => {
+                  setSelectedDate(cell.dateKey);
+                  // Auto-scroll to detail panel on mobile
+                  if (window.innerWidth < 768) {
+                    setTimeout(() => {
+                      detailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 100);
+                  }
+                }}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.97 }}
                 style={{
@@ -136,7 +173,7 @@ export default function CalendarPage() {
                   opacity: isSunday ? 0.4 : 1, position: 'relative',
                 }}
               >
-                <span style={{ fontSize: '0.95rem', fontWeight: isToday ? 700 : 500, color: isToday ? 'var(--primary-400)' : 'var(--text-primary)' }}>{cell.day}</span>
+                <span className="calendar-day-num" style={{ fontSize: '0.95rem', fontWeight: isToday ? 700 : 500, color: isToday ? 'var(--primary-400)' : 'var(--text-primary)' }}>{cell.day}</span>
                 {cell.total > 0 && (
                   <div style={{ display: 'flex', gap: 3, marginTop: 3 }}>
                     {cell.present > 0 && <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--success-400)' }} />}
@@ -168,7 +205,7 @@ export default function CalendarPage() {
       {/* Selected Date Details */}
       <AnimatePresence>
         {selectedDate && selectedData && (
-          <motion.div className="glass-card" style={{ padding: 24, marginTop: 20 }} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+          <motion.div ref={detailRef} className="glass-card" style={{ padding: 24, marginTop: 20 }} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <h3 style={{ fontWeight: 600, fontSize: '1rem' }}>📅 {formatDate(selectedDate)}</h3>
               <motion.button className="btn btn-ghost btn-icon" onClick={() => setSelectedDate(null)} whileHover={{ rotate: 90 }} whileTap={{ scale: 0.9 }}>
@@ -177,7 +214,7 @@ export default function CalendarPage() {
             </div>
 
             {selectedData.entries.length === 0 ? (
-              <p style={{ color: 'var(--text-tertiary)', fontSize: '0.9rem' }}>No attendance recorded for this day.</p>
+              <p style={{ color: 'var(--text-tertiary)', fontSize: '0.9rem' }}>No classes scheduled or recorded for this day.</p>
             ) : (
               <>
                 <div style={{ display: 'flex', gap: 24, marginBottom: 20, flexWrap: 'wrap' }}>
@@ -192,6 +229,10 @@ export default function CalendarPage() {
                   <div style={{ textAlign: 'center' }}>
                     <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--holiday-400)' }}>{selectedData.holiday}</div>
                     <div style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Holiday</div>
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-tertiary)' }}>{selectedData.unmarked}</div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Unmarked</div>
                   </div>
                 </div>
 
@@ -209,9 +250,41 @@ export default function CalendarPage() {
                         <span style={{ fontWeight: 500, fontSize: '0.88rem' }}>{entry.subject.name}</span>
                         <span className="badge badge-info" style={{ fontSize: '0.65rem' }}>{entry.subject.code}</span>
                       </div>
-                      <span className={`badge ${entry.status === 'present' ? 'badge-success' : entry.status === 'absent' ? 'badge-danger' : 'badge-holiday'}`}>
-                        {entry.status === 'present' ? '✓ Present' : entry.status === 'absent' ? '✗ Absent' : '📅 Holiday'}
-                      </span>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        <button
+                          onClick={() => entry.status === 'present' ? undoMark(entry.subId, selectedDate) : markPresent(entry.subId, selectedDate, entry.periods)}
+                          style={{
+                            padding: '4px 8px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600,
+                            background: entry.status === 'present' ? 'var(--success-500)' : 'rgba(34,197,94,0.1)',
+                            color: entry.status === 'present' ? 'white' : 'var(--success-400)',
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          {entry.status === 'present' ? '✓ Present' : 'Present'}
+                        </button>
+                        <button
+                          onClick={() => entry.status === 'absent' ? undoMark(entry.subId, selectedDate) : markAbsent(entry.subId, selectedDate, entry.periods)}
+                          style={{
+                            padding: '4px 8px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600,
+                            background: entry.status === 'absent' ? 'var(--danger-500)' : 'rgba(239,68,68,0.1)',
+                            color: entry.status === 'absent' ? 'white' : 'var(--danger-400)',
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          {entry.status === 'absent' ? '✗ Absent' : 'Absent'}
+                        </button>
+                        <button
+                          onClick={() => entry.status === 'holiday' ? undoMark(entry.subId, selectedDate) : markHoliday(entry.subId, selectedDate)}
+                          style={{
+                            padding: '4px 8px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600,
+                            background: entry.status === 'holiday' ? 'var(--holiday-500)' : 'rgba(20,184,166,0.1)',
+                            color: entry.status === 'holiday' ? 'white' : 'var(--holiday-400)',
+                            transition: 'all 0.2s'
+                          }}
+                        >
+                          {entry.status === 'holiday' ? '📅 Holiday' : 'Holiday'}
+                        </button>
+                      </div>
                     </motion.div>
                   ))}
                 </div>
@@ -220,6 +293,22 @@ export default function CalendarPage() {
           </motion.div>
         )}
       </AnimatePresence>
+      <style>{`
+        .calendar-card {
+          padding: 24px;
+        }
+        @media (max-width: 768px) {
+          .calendar-card {
+            padding: 14px 10px;
+          }
+          .calendar-day-num {
+            font-size: 0.75rem !important;
+          }
+          .calendar-header h2 {
+            font-size: 0.95rem !important;
+          }
+        }
+      `}</style>
     </motion.div>
   );
 }
