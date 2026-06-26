@@ -13,6 +13,7 @@ import { useTheme } from '../context/ThemeContext';
 import { BRANCHES, YEARS, SECTIONS, SEMESTERS, PROGRAMS } from '../utils/sampleData';
 import { getOverallPercentage, getSubjectPercentage } from '../utils/helpers';
 import { AppLockSettings } from '../components/AppLock';
+import { notifyMorningSchedule, notifyEveningSummary } from '../utils/notifications';
 
 export default function Profile() {
   const { profile, subjects, updateProfile, syncStatus, lastSynced, exportBackup, importBackup, forceSyncNow, resetData } = useAttendance();
@@ -408,6 +409,32 @@ export default function Profile() {
                   {permission === 'granted' && !notificationsEnabled && (
                     <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(234,179,8,0.06)', border: '1px solid rgba(234,179,8,0.2)', display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.78rem', color: 'var(--warning-400)' }}>
                       <BellOff size={14} /> Paused — toggle ON to re-enable
+                    </div>
+                  )}
+                  {permission === 'granted' && notificationsEnabled && (
+                    <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
+                      <button
+                        onClick={() => {
+                          const todayName = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+                          const todaySubjects = subjects.filter(s => s.schedule?.[todayName]);
+                          notifyMorningSchedule(todaySubjects, subjects);
+                        }}
+                        style={{ flex: 1, background: 'rgba(59,130,246,0.1)', color: 'var(--primary-400)', border: '1px solid rgba(59,130,246,0.2)', padding: '10px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        Test Morning Alert
+                      </button>
+                      <button
+                        onClick={() => {
+                          const todayName = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+                          const todaySubjects = subjects.filter(s => s.schedule?.[todayName]);
+                          const overallPct = getOverallPercentage(subjects);
+                          // Mocking all attended for the test
+                          notifyEveningSummary(true, 0, overallPct, todaySubjects.length, 0);
+                        }}
+                        style={{ flex: 1, background: 'rgba(139,92,246,0.1)', color: 'var(--accent-400)', border: '1px solid rgba(139,92,246,0.2)', padding: '10px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        Test Evening Alert
+                      </button>
                     </div>
                   )}
                 </>
