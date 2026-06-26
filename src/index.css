@@ -253,12 +253,7 @@ body::before {
   }
 }
 
-/* ─── Light mode: watermark only ─── */
-[data-theme="light"] body::before {
-@keyframes dotGridPulse {
-  0%, 100% { opacity: 0.3; }
-  50%       { opacity: 0.6; }
-}
+
 
 #root {
   position: relative;
