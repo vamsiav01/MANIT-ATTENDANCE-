@@ -217,7 +217,7 @@ export function AuthProvider({ children }) {
 
   const skipAuth = () => {
     if (localStorage.getItem('manit_self_is_setup') === 'true') {
-      const wantFresh = window.confirm("Existing offline data found. Click 'OK' to continue with it, or 'Cancel' to start a fresh account.");
+      const wantFresh = window.confirm("Welcome back! We found your previously saved attendance data on this device.\n\nClick 'OK' to load your saved data, or 'Cancel' to permanently delete it and start a completely new fresh setup.");
       if (!wantFresh) {
         // Clear all local app data (except theme) to start fresh
         const keysToRemove = [];

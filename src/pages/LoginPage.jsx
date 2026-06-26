@@ -391,7 +391,7 @@ export default function LoginPage() {
                   style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: '12px 24px', color: 'rgba(255,255,255,0.5)', fontSize: '0.82rem', fontWeight: 500, cursor: 'pointer', width: '100%' }}
                   whileHover={{ scale: 1.02, borderColor: 'rgba(59,130,246,0.3)' }}
                   whileTap={{ scale: 0.98 }}>
-                  👤 Continue as Guest (offline)
+                  👤 Offline Mode (Local Storage)
                 </motion.button>
               </div>
             </>
