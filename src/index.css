@@ -255,29 +255,12 @@ body {
 
 /* ─── Dark mode background ─── */
 body::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background:
-    radial-gradient(ellipse 80% 60% at 10% 20%, var(--body-gradient-1) 0%, transparent 50%),
-    radial-gradient(ellipse 60% 50% at 90% 80%, var(--body-gradient-2) 0%, transparent 50%),
-    radial-gradient(ellipse 50% 40% at 50% 50%, var(--body-gradient-3) 0%, transparent 50%);
-  pointer-events: none;
-  z-index: 0;
+  /* Removed glowing orbs for a much cleaner background with the logo watermark */
 }
 
 /* ─── Light mode: animated floating orbs ─── */
 [data-theme="light"] body::before {
-  background:
-    radial-gradient(ellipse 70% 55% at 8% 15%,  rgba(59,130,246,0.13) 0%, transparent 55%),
-    radial-gradient(ellipse 55% 45% at 92% 82%,  rgba(139,92,246,0.10) 0%, transparent 55%),
-    radial-gradient(ellipse 45% 35% at 48% 52%,  rgba(20,184,166,0.08) 0%, transparent 50%),
-    radial-gradient(ellipse 40% 30% at 75% 20%,  rgba(249,115,22,0.06) 0%, transparent 50%),
-    radial-gradient(ellipse 35% 28% at 18% 75%,  rgba(236,72,153,0.06) 0%, transparent 50%);
-  animation: lightOrbsDrift 18s ease-in-out infinite alternate;
+  /* Removed for cleaner light mode */
 }
 
 /* Animated orb blobs rendered via pseudo on html in light mode */
