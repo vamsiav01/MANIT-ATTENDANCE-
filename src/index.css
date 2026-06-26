@@ -207,40 +207,6 @@ html {
   max-width: 100vw;
 }
 
-/* ─── Global App Watermark (College Logo & Name) ─── */
-html::before {
-  content: 'MAULANA AZAD NATIONAL INSTITUTE OF TECHNOLOGY';
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 100%;
-  text-align: center;
-  font-size: 2.5vw;
-  font-weight: 800;
-  letter-spacing: 0.15em;
-  color: var(--text-primary);
-  opacity: 0.03; /* Extremely subtle watermark */
-  pointer-events: none;
-  z-index: -1;
-  background: url('/manit-logo.png') no-repeat center top;
-  background-size: auto 65%;
-  padding-top: 35vh;
-  height: 50vh;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  filter: grayscale(100%);
-}
-
-@media (max-width: 768px) {
-  html::before {
-    font-size: 4vw;
-    background-size: auto 50%;
-    padding-top: 40vh;
-  }
-}
-
 body {
   font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
   background: var(--bg-primary);
@@ -261,15 +227,13 @@ body::before {
   left: 0;
   width: 100%;
   height: 100%;
-  /* Modern Dotted Grid + Subtle Glowing Orbs */
-  background-image: 
-    radial-gradient(ellipse 80% 60% at 10% 20%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
-    radial-gradient(ellipse 60% 50% at 90% 80%, rgba(139, 92, 246, 0.08) 0%, transparent 50%),
-    radial-gradient(rgba(255, 255, 255, 0.06) 1.5px, transparent 1.5px);
-  background-size: 100% 100%, 100% 100%, 32px 32px;
-  background-position: center, center, 0 0;
+  /* Very clean, subtle, and premium mesh gradient */
+  background:
+    radial-gradient(circle at 15% 20%, rgba(59, 130, 246, 0.06) 0%, transparent 40%),
+    radial-gradient(circle at 85% 80%, rgba(139, 92, 246, 0.05) 0%, transparent 40%),
+    radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.02) 0%, transparent 40%);
   pointer-events: none;
-  z-index: -2; /* Ensure it stays behind the watermark */
+  z-index: -2;
 }
 
 /* ─── Light mode: animated floating orbs ─── */
