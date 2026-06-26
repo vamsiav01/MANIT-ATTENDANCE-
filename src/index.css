@@ -255,12 +255,30 @@ body {
 
 /* ─── Dark mode background ─── */
 body::before {
-  /* Removed glowing orbs for a much cleaner background with the logo watermark */
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  /* Modern Dotted Grid + Subtle Glowing Orbs */
+  background-image: 
+    radial-gradient(ellipse 80% 60% at 10% 20%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 50% at 90% 80%, rgba(139, 92, 246, 0.08) 0%, transparent 50%),
+    radial-gradient(rgba(255, 255, 255, 0.06) 1.5px, transparent 1.5px);
+  background-size: 100% 100%, 100% 100%, 32px 32px;
+  background-position: center, center, 0 0;
+  pointer-events: none;
+  z-index: -2; /* Ensure it stays behind the watermark */
 }
 
 /* ─── Light mode: animated floating orbs ─── */
 [data-theme="light"] body::before {
-  /* Removed for cleaner light mode */
+  background-image: 
+    radial-gradient(ellipse 70% 55% at 8% 15%,  rgba(59,130,246,0.08) 0%, transparent 55%),
+    radial-gradient(ellipse 55% 45% at 92% 82%,  rgba(139,92,246,0.06) 0%, transparent 55%),
+    radial-gradient(rgba(0, 0, 0, 0.06) 1.5px, transparent 1.5px);
+  background-size: 100% 100%, 100% 100%, 32px 32px;
 }
 
 /* Animated orb blobs rendered via pseudo on html in light mode */
