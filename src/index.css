@@ -253,6 +253,10 @@ body::before {
   }
 }
 
+[data-theme="light"] body::before {
+  opacity: 0.12; /* Increased transparency in light mode */
+}
+
 
 
 #root {

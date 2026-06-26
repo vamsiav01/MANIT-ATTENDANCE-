@@ -9,6 +9,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@uiw/color-convert": "^2.10.3",
+    "@uiw/react-color-shade-slider": "^2.10.3",
+    "@uiw/react-color-wheel": "^2.10.3",
     "firebase": "^12.14.0",
     "framer-motion": "^11.5.0",
     "html2canvas": "^1.4.1",

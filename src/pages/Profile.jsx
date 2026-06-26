@@ -1,5 +1,7 @@
 import React, { useState, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import Wheel from '@uiw/react-color-wheel';
+import { hexToHsva, hsvaToHex } from '@uiw/color-convert';
 import {
   User, Save, BookOpen, CloudOff, Cloud, Download, Upload,
   CheckCircle2, Loader2, AlertTriangle, RefreshCw, LogOut, Shield,
@@ -25,6 +27,8 @@ export default function Profile() {
   const [saved, setSaved] = useState(false);
   const fileInputRef = useRef(null);
   const [showLockModal, setShowLockModal] = useState(false);
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const [hsva, setHsva] = useState({ h: 214, s: 43, v: 90, a: 1 });
   const [isMobile, setIsMobile] = React.useState(() => window.innerWidth <= 768);
 
   React.useEffect(() => {
@@ -346,30 +350,65 @@ export default function Profile() {
                 ))}
                 
                 {/* Custom Color Wheel */}
-                <motion.div 
-                  style={{ position: 'relative', width: 32, height: 32 }}
-                  whileHover={{ scale: 1.15 }}
-                  whileTap={{ scale: 0.9 }}
-                  title="Custom Color"
-                >
-                  <input
-                    type="color"
-                    value={accentColor?.name === 'Custom' ? accentColor.primary : '#ffffff'}
-                    onChange={(e) => setCustomColor(e.target.value, e.target.value)}
-                    style={{
-                      position: 'absolute', opacity: 0, width: '100%', height: '100%', cursor: 'pointer', zIndex: 2
+                <div style={{ position: 'relative' }}>
+                  <motion.div 
+                    style={{ position: 'relative', width: 32, height: 32, cursor: 'pointer' }}
+                    whileHover={{ scale: 1.15 }}
+                    whileTap={{ scale: 0.9 }}
+                    title="Custom Color"
+                    onClick={() => {
+                      if (accentColor?.name === 'Custom') {
+                        try { setHsva(hexToHsva(accentColor.primary)); } catch(e) {}
+                      }
+                      setShowColorPicker(!showColorPicker);
                     }}
-                  />
-                  <div
-                    style={{
-                      width: 32, height: 32, borderRadius: '50%',
-                      background: accentColor?.name === 'Custom' ? accentColor.primary : 'conic-gradient(from 90deg, red, yellow, lime, aqua, blue, magenta, red)',
-                      border: accentColor?.name === 'Custom' ? '2px solid var(--text-primary)' : '2px solid var(--bg-secondary)',
-                      boxShadow: '0 0 0 2px var(--border-primary)',
-                      pointerEvents: 'none'
-                    }}
-                  />
-                </motion.div>
+                  >
+                    <div
+                      style={{
+                        width: 32, height: 32, borderRadius: '50%',
+                        background: accentColor?.name === 'Custom' ? accentColor.primary : 'conic-gradient(from 90deg, red, yellow, lime, aqua, blue, magenta, red)',
+                        border: accentColor?.name === 'Custom' ? '2px solid var(--text-primary)' : '2px solid var(--bg-secondary)',
+                        boxShadow: '0 0 0 2px var(--border-primary)',
+                        pointerEvents: 'none'
+                      }}
+                    />
+                  </motion.div>
+
+                  <AnimatePresence>
+                    {showColorPicker && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                        style={{
+                          position: 'absolute', top: 40, left: isMobile ? -140 : 0, zIndex: 50,
+                          background: 'var(--bg-card)', padding: 16, borderRadius: 16,
+                          border: '1px solid var(--border-secondary)',
+                          boxShadow: 'var(--shadow-lg)'
+                        }}
+                      >
+                        <Wheel 
+                          color={hsva}
+                          onChange={(color) => {
+                            setHsva({ ...hsva, ...color.hsva });
+                            const hex = hsvaToHex({ ...hsva, ...color.hsva });
+                            setCustomColor(hex, hex);
+                          }}
+                        />
+                        <button 
+                          onClick={() => setShowColorPicker(false)}
+                          style={{
+                            marginTop: 12, width: '100%', padding: '8px', borderRadius: 8,
+                            background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)',
+                            color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 600
+                          }}
+                        >
+                          Done
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
             </div>
 
