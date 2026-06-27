@@ -183,7 +183,7 @@ export function exportToCSV(subjects, profile) {
  */
 export function getCurrentStreak(history) {
   if (!history || Object.keys(history).length === 0) return 0;
-  const sortedDates = Object.keys(history).sort((a, b) => new Date(b) - new Date(a));
+  const sortedDates = Object.keys(history).sort((a, b) => b.localeCompare(a));
   
   let streak = 0;
   for (const date of sortedDates) {

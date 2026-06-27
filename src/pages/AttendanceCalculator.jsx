@@ -24,8 +24,8 @@ export default function AttendanceCalculator() {
 
   const calculateVacation = () => {
     if (!vacationStart || !vacationEnd) return;
-    const start = new Date(vacationStart);
-    const end = new Date(vacationEnd);
+    const start = new Date(vacationStart + 'T00:00:00');
+    const end = new Date(vacationEnd + 'T00:00:00');
     if (end < start) return alert("End date must be after start date");
 
     const newSim = {};
