@@ -4,6 +4,8 @@
 //  Evening: attendance summary / "not marked" reminder
 // ============================================================
 
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 const MANIT_ICON = '/icon-192.png';
 const MANIT_BADGE = '/icon-192.png';
 const STORAGE_KEY = 'manit_notif_permission_asked';
@@ -19,22 +21,68 @@ export function isNotificationSupported() {
   return 'Notification' in window;
 }
 
-export async function requestNotificationPermission() {
+export async function requestNotificationPermission(userId) {
   if (!isNotificationSupported()) return 'unsupported';
-  if (Notification.permission === 'granted') return 'granted';
   if (Notification.permission === 'denied') return 'denied';
 
   try {
-    const result = await Notification.requestPermission();
+    const permission = await Notification.requestPermission();
     localStorage.setItem(STORAGE_KEY, 'asked');
-    return result;
-  } catch {
+    
+    if (permission === 'granted' && userId) {
+      await subscribeToWebPush(userId);
+    }
+    
+    return permission;
+  } catch (err) {
+    console.error('Error requesting permission', err);
     return 'denied';
   }
 }
 
 export function hasAskedPermission() {
   return localStorage.getItem(STORAGE_KEY) === 'asked';
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding)
+    .replace(/\-/g, '+')
+    .replace(/_/g, '/');
+
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
+export async function subscribeToWebPush(userId) {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) return null;
+
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const publicVapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
+    if (!publicVapidKey) return null;
+
+    const subscription = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(publicVapidKey)
+    });
+
+    // Save to Firestore under pushSubscriptions collection
+    await setDoc(doc(db, 'pushSubscriptions', userId), {
+      subscription: JSON.parse(JSON.stringify(subscription)),
+      updatedAt: new Date().toISOString()
+    });
+
+    return subscription;
+  } catch (err) {
+    console.error('Failed to subscribe to web push:', err);
+    return null;
+  }
 }
 
 // ── Show notification via Service Worker ─────────────────────

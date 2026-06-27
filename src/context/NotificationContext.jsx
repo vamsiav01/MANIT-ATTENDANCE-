@@ -13,11 +13,13 @@ import {
   clearSmartNotifications,
 } from '../utils/notifications';
 import { useAttendance } from './AttendanceContext';
+import { useAuth } from './AuthContext';
 
 const NotificationContext = createContext();
 
 export function NotificationProvider({ children }) {
   const { subjects, schedule, history, showToast } = useAttendance();
+  const { user } = useAuth();
   // Always reflect the REAL OS permission state
   const [permission, setPermission] = useState(() => getNotificationPermission());
 
@@ -66,7 +68,7 @@ export function NotificationProvider({ children }) {
         return;
       }
       if (currentPerm !== 'granted') {
-        const result = await requestNotificationPermission();
+        const result = await requestNotificationPermission(user?.uid);
         setPermission(result);
         if (result !== 'granted') return;
       }
@@ -96,8 +98,9 @@ export function NotificationProvider({ children }) {
   }, [permission, bannerDismissed]);
 
   const askPermission = useCallback(async (profileName) => {
-    const result = await requestNotificationPermission();
+    const result = await requestNotificationPermission(user?.uid);
     setPermission(result);
+    setBannerDismissed(true);
     setShowBanner(false);
     if (result === 'granted') {
       await notifyWelcome(profileName || 'Student');
