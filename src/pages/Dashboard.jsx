@@ -179,7 +179,7 @@ export default function Dashboard() {
         <div style={{ position: 'absolute', top: -150, left: '50%', transform: 'translateX(-50%)', width: 600, height: 300, background: 'radial-gradient(ellipse at center, rgba(59,130,246,0.15) 0%, transparent 70%)', zIndex: 0 }} />
 
         {/* Large Logo Watermark */}
-        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 400, height: 400, zIndex: 0, opacity: 0.03, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 400, height: 400, zIndex: 0, opacity: 0.08, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <img src="/manit-logo.png" alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', filter: 'grayscale(100%)' }} />
         </div>
         
@@ -200,7 +200,7 @@ export default function Dashboard() {
               {profile.name} <span style={{ opacity: 0.5 }}>|</span> {profile.branch || 'Student'}
             </p>
           </div>
-          <div style={{ width: 72, height: 72, background: 'white', borderRadius: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.2)' }}>
+          <div style={{ width: 72, height: 72, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 10 }}>
             <img src="/manit-logo.png" alt="MANIT Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
           </div>
         </div>
