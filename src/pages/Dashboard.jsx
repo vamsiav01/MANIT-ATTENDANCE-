@@ -125,7 +125,8 @@ export default function Dashboard() {
           </h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
             {todaySubjects.map(sub => {
-              const canMiss = classesCanMiss(sub.attended, sub.totalClasses);
+              const target = sub.targetPct !== undefined ? sub.targetPct : 75;
+              const canMiss = classesCanMiss(sub.attended, sub.totalClasses, target);
               const isSafe = canMiss > 0;
               return (
                 <div key={sub.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: 'var(--radius-sm)', background: isSafe ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', border: `1px solid ${isSafe ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)'}` }}>
@@ -251,8 +252,9 @@ export default function Dashboard() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
                 {subjects.map(sub => {
                   const pct = getSubjectPercentage(sub);
-                  const canMiss = classesCanMiss(sub.attended, sub.totalClasses);
-                  const needed = classesNeeded(sub.attended, sub.totalClasses);
+                  const target = sub.targetPct !== undefined ? sub.targetPct : 75;
+                  const canMiss = classesCanMiss(sub.attended, sub.totalClasses, target);
+                  const needed = classesNeeded(sub.attended, sub.totalClasses, target);
                   
                   return (
                     <div key={sub.id}>
@@ -261,14 +263,14 @@ export default function Dashboard() {
                           <div style={{ width: 10, height: 10, borderRadius: 3, background: sub.color }} />
                           <span style={{ fontSize: '1rem', fontWeight: 600, color: '#f8fafc' }}>{sub.code || sub.name}</span>
                         </div>
-                        <span style={{ fontSize: '1.05rem', fontWeight: 800, color: pct >= 75 ? '#34d399' : pct >= 60 ? '#fbbf24' : '#f87171' }}>{pct}%</span>
+                        <span style={{ fontSize: '1.05rem', fontWeight: 800, color: pct >= target ? '#34d399' : pct >= 60 ? '#fbbf24' : '#f87171' }}>{pct}%</span>
                       </div>
                       <div style={{ height: 6, background: 'rgba(255,255,255,0.08)', borderRadius: 3, overflow: 'hidden', marginBottom: 6 }}>
                         <div style={{ width: `${pct}%`, height: '100%', background: sub.color, borderRadius: 3 }} />
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: '#94a3b8', fontWeight: 500 }}>
                         <span>{sub.attended}/{sub.totalClasses} classes attended</span>
-                        {pct >= 75 ? (
+                        {pct >= target ? (
                           <span style={{ color: '#34d399' }}>Safe to miss {canMiss}</span>
                         ) : (
                           <span style={{ color: '#f87171' }}>Attend {needed} more</span>
@@ -441,8 +443,9 @@ export default function Dashboard() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 14 }}>
           {subjects.map((sub, idx) => {
             const pct = getSubjectPercentage(sub);
-            const canMiss = classesCanMiss(sub.attended, sub.totalClasses);
-            const needed = classesNeeded(sub.attended, sub.totalClasses);
+            const target = sub.targetPct !== undefined ? sub.targetPct : 75;
+            const canMiss = classesCanMiss(sub.attended, sub.totalClasses, target);
+            const needed = classesNeeded(sub.attended, sub.totalClasses, target);
 
             return (
               <motion.div
@@ -478,7 +481,7 @@ export default function Dashboard() {
 
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>
                   <span>{sub.attended}/{sub.totalClasses} classes</span>
-                  {pct >= 75 ? (
+                  {pct >= target ? (
                     <span style={{ color: 'var(--success-400)' }}>Can miss {canMiss} more</span>
                   ) : (
                     <span style={{ color: 'var(--danger-400)' }}>Attend {needed} more</span>

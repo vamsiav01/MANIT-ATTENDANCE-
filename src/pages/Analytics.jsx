@@ -265,8 +265,9 @@ export default function Analytics() {
             <tbody>
               {subjects.map((sub) => {
                 const pct = getSubjectPercentage(sub);
-                const canMissVal = classesCanMiss(sub.attended, sub.totalClasses);
-                const neededVal = classesNeeded(sub.attended, sub.totalClasses);
+                const target = sub.targetPct !== undefined ? sub.targetPct : 75;
+                const canMissVal = classesCanMiss(sub.attended, sub.totalClasses, target);
+                const neededVal = classesNeeded(sub.attended, sub.totalClasses, target);
 
                 return (
                   <tr key={sub.id}>
@@ -299,14 +300,14 @@ export default function Analytics() {
                       </div>
                     </td>
                     <td>
-                      {pct >= 75 ? (
+                      {pct >= target ? (
                         <span style={{ color: 'var(--success-400)', fontSize: '0.82rem' }}>Can miss {canMissVal}</span>
                       ) : (
                         <span style={{ color: 'var(--danger-400)', fontSize: '0.82rem' }}>Need {neededVal} more</span>
                       )}
                     </td>
                     <td>
-                      {pct >= 75 ? (
+                      {pct >= target ? (
                         <span className="badge badge-success">Safe</span>
                       ) : pct >= 60 ? (
                         <span className="badge badge-warning">Warning</span>

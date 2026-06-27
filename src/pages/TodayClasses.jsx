@@ -148,8 +148,9 @@ export default function TodayClasses() {
             const rawStatus = todayHistory[sub.id];
             const status = typeof rawStatus === 'string' ? rawStatus : rawStatus?.status;
             const pct = getSubjectPercentage(sub);
-            const canMiss = classesCanMiss(sub.attended, sub.totalClasses);
-            const needed = classesNeeded(sub.attended, sub.totalClasses);
+            const target = sub.targetPct !== undefined ? sub.targetPct : 75;
+            const canMiss = classesCanMiss(sub.attended, sub.totalClasses, target);
+            const needed = classesNeeded(sub.attended, sub.totalClasses, target);
             const isHoliday = status === 'holiday';
 
             return (
@@ -184,7 +185,7 @@ export default function TodayClasses() {
 
                     <div style={{ display: 'flex', gap: 8, marginBottom: 10, flexWrap: 'wrap' }}>
                       <span className="badge badge-info">{sub.code}</span>
-                      <span className={`badge ${pct >= 75 ? 'badge-success' : pct >= 60 ? 'badge-warning' : 'badge-danger'}`}>
+                      <span className={`badge ${pct >= target ? 'badge-success' : pct >= 60 ? 'badge-warning' : 'badge-danger'}`}>
                         {pct}% attendance
                       </span>
                       <span className="badge" style={{
@@ -208,10 +209,10 @@ export default function TodayClasses() {
                     <p style={{ fontSize: '0.78rem', color: 'var(--text-tertiary)' }}>
                       {isHoliday ? (
                         <span style={{ color: 'var(--holiday-400)' }}>📅 Holiday — no attendance change</span>
-                      ) : pct >= 75 ? (
+                      ) : pct >= target ? (
                         <span style={{ color: 'var(--success-400)' }}>✓ Safe — can miss {canMiss} more class{canMiss !== 1 ? 'es' : ''}</span>
                       ) : (
-                        <span style={{ color: 'var(--danger-400)' }}>⚠ Need to attend {needed} consecutive class{needed !== 1 ? 'es' : ''} to reach 75%</span>
+                        <span style={{ color: 'var(--danger-400)' }}>⚠ Need to attend {needed} consecutive class{needed !== 1 ? 'es' : ''} to reach {target}%</span>
                       )}
                     </p>
                   </div>

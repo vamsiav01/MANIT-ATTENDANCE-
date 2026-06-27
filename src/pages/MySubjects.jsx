@@ -23,12 +23,12 @@ export default function MySubjects() {
   const [calYear, setCalYear] = useState(new Date().getFullYear());
   const [formData, setFormData] = useState({
     name: '', code: '', teacher: '', days: [],
-    periodsPerDay: {}, totalClasses: 0, attended: 0, color: '',
+    periodsPerDay: {}, totalClasses: 0, attended: 0, color: '', targetPct: 75,
   });
 
   const openAdd = () => {
     setEditingSub(null);
-    setFormData({ name: '', code: '', teacher: '', days: [], periodsPerDay: {}, totalClasses: 0, attended: 0, color: '' });
+    setFormData({ name: '', code: '', teacher: '', days: [], periodsPerDay: {}, totalClasses: 0, attended: 0, color: '', targetPct: 75 });
     setShowModal(true);
   };
 
@@ -45,6 +45,7 @@ export default function MySubjects() {
       name: sub.name, code: sub.code, teacher: sub.teacher || '',
       days: sub.days || [], periodsPerDay: ppd,
       totalClasses: sub.totalClasses, attended: sub.attended, color: sub.color || '',
+      targetPct: sub.targetPct !== undefined ? sub.targetPct : 75,
     });
     setShowModal(true);
   };
@@ -79,6 +80,7 @@ export default function MySubjects() {
       name: formData.name, code: formData.code, teacher: formData.teacher,
       days: formData.days, periodsPerDay: finalPeriodsPerDay,
       totalClasses: Number(formData.totalClasses), attended: Number(formData.attended),
+      targetPct: Number(formData.targetPct),
     };
     if (editingSub) {
       if (formData.color && formData.color !== editingSub.color) payload.color = formData.color;
@@ -177,8 +179,9 @@ export default function MySubjects() {
         <AnimatePresence>
           {subjects.map((sub, idx) => {
             const pct = getSubjectPercentage(sub);
-            const canMiss = classesCanMiss(sub.attended, sub.totalClasses);
-            const needed = classesNeeded(sub.attended, sub.totalClasses);
+            const target = sub.targetPct !== undefined ? sub.targetPct : 75;
+            const canMiss = classesCanMiss(sub.attended, sub.totalClasses, target);
+            const needed = classesNeeded(sub.attended, sub.totalClasses, target);
             const totalPeriods = getTotalPeriodsPerWeek(sub);
 
             return (
@@ -240,11 +243,11 @@ export default function MySubjects() {
                   <span>✗ Missed: <strong style={{ color: 'var(--danger-400)' }}>{sub.totalClasses - sub.attended}</strong></span>
                 </div>
 
-                <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-sm)', background: pct >= 75 ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)', border: `1px solid ${pct >= 75 ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)'}`, display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.82rem', marginBottom: 0 }}>
-                  {pct >= 75 ? (
+                <div style={{ padding: '10px 14px', borderRadius: 'var(--radius-sm)', background: pct >= target ? 'rgba(34,197,94,0.08)' : 'rgba(239,68,68,0.08)', border: `1px solid ${pct >= target ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)'}`, display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.82rem', marginBottom: 0 }}>
+                  {pct >= target ? (
                     <><TrendingUp size={16} style={{ color: 'var(--success-400)' }} /><span style={{ color: 'var(--success-400)', fontWeight: 600 }}>Can miss {canMiss} more class{canMiss !== 1 ? 'es' : ''}</span></>
                   ) : (
-                    <><TrendingDown size={16} style={{ color: 'var(--danger-400)' }} /><span style={{ color: 'var(--danger-400)', fontWeight: 600 }}>Attend {needed} consecutive class{needed !== 1 ? 'es' : ''} to reach 75%</span></>
+                    <><TrendingDown size={16} style={{ color: 'var(--danger-400)' }} /><span style={{ color: 'var(--danger-400)', fontWeight: 600 }}>Attend {needed} consecutive class{needed !== 1 ? 'es' : ''} to reach {target}%</span></>
                   )}
                 </div>
               </motion.div>
@@ -353,6 +356,11 @@ export default function MySubjects() {
                       <label className="form-label">Classes Attended</label>
                       <input type="number" className="form-input" min="0" value={formData.attended} onChange={(e) => setFormData({ ...formData, attended: e.target.value })} id="attended-classes-input" />
                     </div>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Target Attendance %</label>
+                    <input type="number" className="form-input" min="0" max="100" value={formData.targetPct} onChange={(e) => setFormData({ ...formData, targetPct: e.target.value })} />
                   </div>
                 </div>
                 <div className="modal-actions">
