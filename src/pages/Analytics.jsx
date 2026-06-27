@@ -53,7 +53,7 @@ export default function Analytics() {
 
   const barData = useMemo(() => {
     return subjects.map((sub) => ({
-      name: sub.code,
+      name: sub.name || sub.code,
       fullName: sub.name,
       percentage: getSubjectPercentage(sub),
       fill: sub.color,
@@ -78,7 +78,7 @@ export default function Analytics() {
 
   const radarData = useMemo(() => {
     return subjects.map((sub) => ({
-      subject: sub.code,
+      subject: sub.name || sub.code,
       attendance: getSubjectPercentage(sub),
       fullMark: 100,
     }));
@@ -153,7 +153,7 @@ export default function Analytics() {
                 whileHover={{ scale: 1.05 }}
               >
                 <div className={getPctClass(pct)} style={{ fontSize: '1rem', fontWeight: 700 }}>{pct}%</div>
-                <div style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', marginTop: 2 }}>{sub.code}</div>
+                <div style={{ fontSize: '0.65rem', color: 'var(--text-tertiary)', marginTop: 2 }}>{sub.name || sub.code}</div>
               </motion.div>
             );
           })}

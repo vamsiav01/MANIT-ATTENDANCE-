@@ -131,7 +131,7 @@ export default function Dashboard() {
               return (
                 <div key={sub.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', borderRadius: 'var(--radius-sm)', background: isSafe ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', border: `1px solid ${isSafe ? 'rgba(34,197,94,0.2)' : 'rgba(239,68,68,0.2)'}` }}>
                   <div>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>{sub.code}</div>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>{sub.name || sub.code}</div>
                     <div style={{ fontSize: '0.72rem', color: isSafe ? 'var(--success-400)' : 'var(--danger-400)', marginTop: 2, fontWeight: 500 }}>
                       {isSafe ? `Can bunk ${canMiss} class${canMiss > 1 ? 'es' : ''}` : 'Do NOT bunk!'}
                     </div>
@@ -261,7 +261,7 @@ export default function Dashboard() {
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 6 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <div style={{ width: 10, height: 10, borderRadius: 3, background: sub.color }} />
-                          <span style={{ fontSize: '1rem', fontWeight: 600, color: '#f8fafc' }}>{sub.code || sub.name}</span>
+                          <span style={{ fontSize: '1rem', fontWeight: 600, color: '#f8fafc' }}>{sub.name || sub.code}</span>
                         </div>
                         <span style={{ fontSize: '1.05rem', fontWeight: 800, color: pct >= target ? '#34d399' : pct >= 60 ? '#fbbf24' : '#f87171' }}>{pct}%</span>
                       </div>
@@ -461,8 +461,8 @@ export default function Dashboard() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <div style={{ width: 10, height: 10, borderRadius: '50%', background: sub.color }} />
                     <div>
-                      <h4 style={{ fontSize: '0.88rem', fontWeight: 600 }}>{sub.code}</h4>
-                      <p style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>{sub.name}</p>
+                      <h4 style={{ fontSize: '0.88rem', fontWeight: 600 }}>{sub.name || sub.code}</h4>
+                      <p style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>{sub.code}</p>
                     </div>
                   </div>
                   <span className={getPctClass(pct)} style={{ fontSize: '1.2rem', fontWeight: 800 }}>{pct}%</span>

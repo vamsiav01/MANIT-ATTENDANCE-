@@ -257,8 +257,8 @@ export default function Timetable() {
                           
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
                             <div style={{ width: 8, height: 8, borderRadius: '50%', background: sub.color }} />
-                            <span style={{ fontWeight: 600 }}>{sub.code}</span>
-                            <span style={{ color: 'var(--text-tertiary)', fontSize: '0.78rem' }}>{sub.name}</span>
+                            <span style={{ fontWeight: 600 }}>{sub.name || sub.code}</span>
+                            <span style={{ color: 'var(--text-tertiary)', fontSize: '0.78rem' }}>{sub.code}</span>
                             {periods > 1 && (
                               <span className="badge badge-day" style={{ fontSize: '0.6rem' }}>×{periods}</span>
                             )}
@@ -327,7 +327,7 @@ export default function Timetable() {
                                 whileTap={{ scale: 0.97 }}
                               >
                                 <div style={{ width: 6, height: 6, borderRadius: '50%', background: sub.color }} />
-                                {sub.code} — {sub.name}
+                                {sub.name || sub.code} — {sub.code}
                               </motion.button>
                             ))}
                           </div>
@@ -365,7 +365,7 @@ export default function Timetable() {
                 }}>
                   <div style={{ width: 6, height: 6, borderRadius: '50%', background: sub.color, flexShrink: 0 }} />
                   <div style={{ flex: 1 }}>
-                    <span style={{ fontSize: '0.82rem', fontWeight: 500 }}>{sub.code}</span>
+                    <span style={{ fontSize: '0.82rem', fontWeight: 500 }}>{sub.name || sub.code}</span>
                     <div style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)' }}>
                       {daysWithSub.length} day{daysWithSub.length !== 1 ? 's' : ''} • {totalPeriods} period{totalPeriods !== 1 ? 's' : ''}/week
                     </div>

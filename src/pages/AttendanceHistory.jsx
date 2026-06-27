@@ -107,7 +107,7 @@ export default function AttendanceHistory() {
             >
               <option value="all">All Subjects</option>
               {subjects.map((s) => (
-                <option key={s.id} value={s.id}>{s.code} — {s.name}</option>
+                <option key={s.id} value={s.id}>{s.name || s.code} — {s.code}</option>
               ))}
             </select>
           </div>
