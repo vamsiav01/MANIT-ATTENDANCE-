@@ -8,7 +8,7 @@ import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 const MANIT_ICON = '/icon-192.png';
 const MANIT_BADGE = '/icon-192.png';
-const STORAGE_KEY = 'manit_notif_permission_asked';
+const STORAGE_KEY = 'manit_self_notif_permission_asked';
 
 // ── Permission helpers ──────────────────────────────────────
 

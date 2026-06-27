@@ -25,13 +25,13 @@ export function NotificationProvider({ children }) {
 
   const [showBanner, setShowBanner] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(() =>
-    localStorage.getItem('manit_notif_banner_dismissed') === 'true'
+    localStorage.getItem('manit_self_notif_banner_dismissed') === 'true'
   );
 
   // notificationsEnabled = OS permission is granted AND user hasn't disabled in-app
   const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
     const osPermission = getNotificationPermission();
-    const stored = localStorage.getItem('manit_notif_enabled');
+    const stored = localStorage.getItem('manit_self_notif_enabled');
     // Only enabled if OS also granted
     return osPermission === 'granted' && (stored === null ? true : stored === 'true');
   });
@@ -48,7 +48,7 @@ export function NotificationProvider({ children }) {
           if (current !== 'granted') {
             // OS revoked — disable in-app too
             setNotificationsEnabled(false);
-            localStorage.setItem('manit_notif_enabled', 'false');
+            localStorage.setItem('manit_self_notif_enabled', 'false');
           }
           return current;
         }
@@ -75,12 +75,12 @@ export function NotificationProvider({ children }) {
       await notifyWelcome(profileName || 'Student');
       showToast('✅ Thank you! Notifications activated successfully! 🔔');
       setNotificationsEnabled(true);
-      localStorage.setItem('manit_notif_enabled', 'true');
+      localStorage.setItem('manit_self_notif_enabled', 'true');
       // Start smart morning + evening notifications
       scheduleSmartNotifications(() => ({ subjects, schedule, history }));
     } else {
       setNotificationsEnabled(false);
-      localStorage.setItem('manit_notif_enabled', 'false');
+      localStorage.setItem('manit_self_notif_enabled', 'false');
       clearDailyReminder();
       clearSmartNotifications();
     }
@@ -93,7 +93,7 @@ export function NotificationProvider({ children }) {
     if (permission === 'granted') return;
     if (permission === 'denied') return;
 
-    const timer = setTimeout(() => setShowBanner(true), 3000);
+    const timer = setTimeout(() => setShowBanner(true), 500);
     return () => clearTimeout(timer);
   }, [permission, bannerDismissed]);
 
@@ -106,7 +106,7 @@ export function NotificationProvider({ children }) {
       await notifyWelcome(profileName || 'Student');
       showToast('✅ Thank you! Notifications activated successfully! 🔔');
       setNotificationsEnabled(true);
-      localStorage.setItem('manit_notif_enabled', 'true');
+      localStorage.setItem('manit_self_notif_enabled', 'true');
     }
     return result;
   }, []);
@@ -114,14 +114,14 @@ export function NotificationProvider({ children }) {
   const dismissBanner = useCallback(() => {
     setShowBanner(false);
     setBannerDismissed(true);
-    localStorage.setItem('manit_notif_banner_dismissed', 'true');
+    localStorage.setItem('manit_self_notif_banner_dismissed', 'true');
   }, []);
 
   const checkAttendanceAlerts = useCallback(async (subjects, getSubjectPercentage) => {
     if (permission !== 'granted') return;
     if (!notificationsEnabled) return;
 
-    const alerted = JSON.parse(localStorage.getItem('manit_notif_alerted') || '{}');
+    const alerted = JSON.parse(localStorage.getItem('manit_self_notif_alerted') || '{}');
     const now = Date.now();
     const COOLDOWN = 4 * 60 * 60 * 1000;
 
@@ -139,7 +139,7 @@ export function NotificationProvider({ children }) {
       }
     }
 
-    localStorage.setItem('manit_notif_alerted', JSON.stringify(alerted));
+    localStorage.setItem('manit_self_notif_alerted', JSON.stringify(alerted));
   }, [permission, notificationsEnabled]);
 
   const checkUnmarkedClasses = useCallback(async (unmarkedCount) => {
@@ -147,12 +147,12 @@ export function NotificationProvider({ children }) {
     if (!notificationsEnabled) return;
     if (unmarkedCount === 0) return;
 
-    const lastUnmarkedAlert = localStorage.getItem('manit_notif_unmarked_ts') || 0;
+    const lastUnmarkedAlert = localStorage.getItem('manit_self_notif_unmarked_ts') || 0;
     const COOLDOWN = 2 * 60 * 60 * 1000;
     if (Date.now() - Number(lastUnmarkedAlert) < COOLDOWN) return;
 
     await notifyUnmarkedClasses(unmarkedCount);
-    localStorage.setItem('manit_notif_unmarked_ts', Date.now().toString());
+    localStorage.setItem('manit_self_notif_unmarked_ts', Date.now().toString());
   }, [permission, notificationsEnabled]);
 
   const setupDailyReminder = useCallback((getOverallPct) => {
@@ -168,7 +168,7 @@ export function NotificationProvider({ children }) {
 
   const resetBannerDismiss = useCallback(() => {
     setBannerDismissed(false);
-    localStorage.removeItem('manit_notif_banner_dismissed');
+    localStorage.removeItem('manit_self_notif_banner_dismissed');
   }, []);
 
   const value = {
