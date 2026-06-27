@@ -12,37 +12,21 @@ export default function LoginPage() {
 
   // PWA Install Prompt
   const [installPrompt, setInstallPrompt] = useState(null);
-  const [isInstalled, setIsInstalled] = useState(false);
-  const [showInstallGuide, setShowInstallGuide] = useState(false);
 
   useEffect(() => {
-    if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
-      setIsInstalled(true);
-    }
     const handleBeforeInstall = (e) => {
       e.preventDefault();
       setInstallPrompt(e);
     };
-    const handleAppInstalled = () => {
-      setIsInstalled(true);
-      setInstallPrompt(null);
-    };
     window.addEventListener('beforeinstallprompt', handleBeforeInstall);
-    window.addEventListener('appinstalled', handleAppInstalled);
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
-      window.removeEventListener('appinstalled', handleAppInstalled);
-    };
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
   }, []);
 
   const handleInstallClick = async () => {
     if (installPrompt) {
       installPrompt.prompt();
       const result = await installPrompt.userChoice;
-      if (result.outcome === 'accepted') setIsInstalled(true);
-      setInstallPrompt(null);
-    } else {
-      setShowInstallGuide(true);
+      if (result.outcome === 'accepted') setInstallPrompt(null);
     }
   };
 
@@ -71,7 +55,7 @@ export default function LoginPage() {
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, position: 'relative', overflow: 'hidden' }}>
       
       {/* Install App Button at Top Right */}
-      {!isInstalled && (
+      {installPrompt && (
         <motion.button
           onClick={handleInstallClick}
           style={{
@@ -285,48 +269,6 @@ export default function LoginPage() {
           )}
         </motion.div>
       </motion.div>
-
-      {/* Install Guide Modal */}
-      <AnimatePresence>
-        {showInstallGuide && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            style={{
-              position: 'fixed', inset: 0, zIndex: 1000,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
-              background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
-            }}
-            onClick={() => setShowInstallGuide(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, y: 10 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 10 }}
-              style={{
-                background: 'var(--surface)', border: '1px solid var(--border-primary)',
-                borderRadius: 20, padding: 24, maxWidth: 360, width: '100%',
-                boxShadow: '0 20px 40px rgba(0,0,0,0.4)', position: 'relative',
-              }}
-              onClick={e => e.stopPropagation()}
-            >
-              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: 12 }}>Install App</h3>
-              <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 20 }}>
-                {/iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase()) 
-                  ? <>To install, tap the <b>Share button</b> (square with arrow) at the bottom of Safari and select <b>"Add to Home Screen"</b>.</>
-                  : <>To install, tap your browser's menu (⋮) and select <b>"Add to Home screen"</b> or <b>"Install app"</b>.</>}
-              </div>
-              <button 
-                style={{ width: '100%', padding: 12, borderRadius: 12, background: 'var(--primary-500)', color: 'white', fontWeight: 700, border: 'none', cursor: 'pointer' }}
-                onClick={() => setShowInstallGuide(false)}
-              >
-                Got it
-              </button>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <style>{`
         @keyframes floatOrb1 {
