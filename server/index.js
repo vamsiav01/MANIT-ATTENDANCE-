@@ -2,7 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const webpush = require('web-push');
-const admin = require('firebase-admin');
+const { initializeApp, cert } = require('firebase-admin/app');
+const { getFirestore } = require('firebase-admin/firestore');
 const cron = require('node-cron');
 
 const app = express();
@@ -20,8 +21,8 @@ try {
     serviceAccount = require('./serviceAccountKey.json');
   }
 
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
+  initializeApp({
+    credential: cert(serviceAccount)
   });
   console.log('✅ Firebase Admin initialized');
 } catch (err) {
@@ -29,7 +30,7 @@ try {
   process.exit(1);
 }
 
-const db = admin.firestore();
+const db = getFirestore();
 
 // 2. Configure Web Push
 webpush.setVapidDetails(
