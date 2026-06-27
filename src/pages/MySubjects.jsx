@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, Edit3, Trash2, X, BookOpen, TrendingDown, TrendingUp,
@@ -20,6 +20,7 @@ export default function MySubjects() {
   const [editingSub, setEditingSub] = useState(null);
   const [calendarSubId, setCalendarSubId] = useState(null);
   const [selectedCalDate, setSelectedCalDate] = useState(null);
+  const [calPeriods, setCalPeriods] = useState(1);
   const [calMonth, setCalMonth] = useState(new Date().getMonth());
   const [calYear, setCalYear] = useState(new Date().getFullYear());
   const [formData, setFormData] = useState({
@@ -112,6 +113,16 @@ export default function MySubjects() {
 
   // ---- Subject Calendar Logic ----
   const calendarSub = subjects.find((s) => s.id === calendarSubId);
+
+  useEffect(() => {
+    if (selectedCalDate && calendarSub) {
+      const date = new Date(selectedCalDate + 'T00:00:00');
+      const dayName = date.toLocaleDateString('en-US', { weekday: 'long' });
+      const defaultPeriods = getPeriodsForDay(calendarSub, dayName);
+      setCalPeriods(defaultPeriods || 1);
+    }
+  }, [selectedCalDate, calendarSubId, calendarSub]);
+
   const calDays = useMemo(() => {
     if (!calendarSubId) return [];
     const dim = getDaysInMonth(calYear, calMonth);
@@ -145,8 +156,8 @@ export default function MySubjects() {
   const handleCalMark = (type) => {
     if (!calendarSubId || !selectedCalDate) return;
     undoMark(calendarSubId, selectedCalDate);
-    if (type === 'present') markPresent(calendarSubId, selectedCalDate);
-    else if (type === 'absent') markAbsent(calendarSubId, selectedCalDate);
+    if (type === 'present') markPresent(calendarSubId, selectedCalDate, calPeriods);
+    else if (type === 'absent') markAbsent(calendarSubId, selectedCalDate, calPeriods);
     else if (type === 'holiday') markHoliday(calendarSubId, selectedCalDate);
   };
 
@@ -465,6 +476,13 @@ export default function MySubjects() {
                       <motion.button className="btn btn-sm" style={{ background: 'rgba(34,197,94,0.15)', color: 'var(--success-400)', border: '1px solid rgba(34,197,94,0.3)', padding: '4px 10px' }} onClick={() => handleCalMark('present')} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}><Check size={14}/> P</motion.button>
                       <motion.button className="btn btn-sm" style={{ background: 'rgba(239,68,68,0.15)', color: 'var(--danger-400)', border: '1px solid rgba(239,68,68,0.3)', padding: '4px 10px' }} onClick={() => handleCalMark('absent')} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}><X size={14}/> A</motion.button>
                       <motion.button className="btn btn-sm" style={{ background: 'rgba(20,184,166,0.15)', color: 'var(--holiday-400)', border: '1px solid rgba(20,184,166,0.3)', padding: '4px 10px' }} onClick={() => handleCalMark('holiday')} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}><Calendar size={14}/> H</motion.button>
+                      
+                      <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', borderRadius: 6, padding: '2px 4px', marginLeft: 4 }} title="Periods">
+                        <button className="btn btn-ghost btn-sm" style={{ padding: 2, height: 22, width: 22, minWidth: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setCalPeriods(Math.max(1, calPeriods - 1))}>-</button>
+                        <span style={{ fontSize: '0.8rem', width: 14, textAlign: 'center', fontWeight: 700 }}>{calPeriods}</span>
+                        <button className="btn btn-ghost btn-sm" style={{ padding: 2, height: 22, width: 22, minWidth: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setCalPeriods(calPeriods + 1)}>+</button>
+                      </div>
+
                       <motion.button className="btn btn-icon btn-sm" style={{ color: 'var(--text-tertiary)', marginLeft: 4 }} onClick={handleCalUndo} whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }} title="Undo"><Undo2 size={14}/></motion.button>
                     </motion.div>
                   ) : (
