@@ -224,14 +224,14 @@ body::before {
   content: 'MAULANA AZAD NATIONAL INSTITUTE OF TECHNOLOGY';
   position: fixed;
   top: 50%;
-  left: 50%;
+  left: calc(50% + (var(--sidebar-width) / 2));
   transform: translate(-50%, -50%);
-  width: 100vw;
+  width: calc(100vw - var(--sidebar-width));
   height: 50vh;
   text-align: center;
-  font-size: 2vw;
+  font-size: 1.6vw;
   font-weight: 800;
-  letter-spacing: 0.15em;
+  letter-spacing: 0.1em;
   color: var(--text-primary);
   opacity: 0.1;
   pointer-events: none;
@@ -243,13 +243,17 @@ body::before {
   align-items: flex-end;
   justify-content: center;
   filter: grayscale(100%);
+  white-space: nowrap;
 }
 
 @media (max-width: 768px) {
   body::before {
-    font-size: 4vw;
+    left: 50%;
+    width: 100vw;
+    font-size: 3.5vw;
     background-size: auto 50%;
     padding-top: 40vh;
+    white-space: normal;
   }
 }
 
