@@ -16,7 +16,8 @@ const fadeIn = { hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } };
 
 export default function AttendanceCalculator() {
   const { subjects, schedule } = useAttendance();
-  const [targetPct, setTargetPct] = useState(null);
+  const [subjectTargetPct, setSubjectTargetPct] = useState(null);
+  const [overallTargetPct, setOverallTargetPct] = useState(75);
   const [simulations, setSimulations] = useState({});
   const [tab, setTab] = useState('standard');
   const [vacationStart, setVacationStart] = useState('');
@@ -71,7 +72,7 @@ export default function AttendanceCalculator() {
   const results = useMemo(() => {
     return subjects.map((sub) => {
       const sim = getSim(sub.id);
-      const activeTarget = targetPct !== null ? targetPct : (sub.targetPct !== undefined ? sub.targetPct : 75);
+      const activeTarget = subjectTargetPct !== null ? subjectTargetPct : (sub.targetPct !== undefined ? sub.targetPct : 75);
       const newAttended = sub.attended + sim.futureAttend;
       const newTotal = sub.totalClasses + sim.futureAttend + sim.futureMiss;
       const currentPct = getSubjectPercentage(sub);
@@ -81,7 +82,7 @@ export default function AttendanceCalculator() {
       const need = classesNeeded(newAttended, newTotal, activeTarget);
       return { ...sub, sim, currentPct, newAttended, newTotal, newPct, meetsTarget, canMiss, need, change: newPct - currentPct, activeTarget };
     });
-  }, [subjects, simulations, targetPct]);
+  }, [subjects, simulations, subjectTargetPct]);
 
   const currentOverall = getOverallPercentage(subjects);
   const simulatedOverall = useMemo(() => {
@@ -93,16 +94,21 @@ export default function AttendanceCalculator() {
   const meetingCount = results.filter((r) => r.meetsTarget).length;
   const hasSimulations = Object.keys(simulations).length > 0;
 
+  const overallReq = useMemo(() => {
+    let a = 0, t = 0;
+    results.forEach((r) => { a += r.newAttended; t += r.newTotal; });
+    return classesNeeded(a, t, overallTargetPct);
+  }, [results, overallTargetPct]);
+
   const [showConfetti, setShowConfetti] = useState(false);
 
   React.useEffect(() => {
-    const activeOverallTarget = targetPct !== null ? targetPct : 75;
-    if (hasSimulations && simulatedOverall >= activeOverallTarget && simulatedOverall > currentOverall) {
+    if (hasSimulations && simulatedOverall >= overallTargetPct && simulatedOverall > currentOverall) {
       setShowConfetti(true);
       const timer = setTimeout(() => setShowConfetti(false), 4000);
       return () => clearTimeout(timer);
     }
-  }, [simulatedOverall, targetPct, hasSimulations, currentOverall]);
+  }, [simulatedOverall, overallTargetPct, hasSimulations, currentOverall]);
 
   return (
     <motion.div initial="hidden" animate="visible" variants={{ visible: { transition: { staggerChildren: 0.05 } } }}>
@@ -162,31 +168,53 @@ export default function AttendanceCalculator() {
 
       {/* ===== STATS BAR ===== */}
       <motion.div variants={fadeIn} className="calc-stats-grid">
-        {/* Row 1 — Target Selector (full width always) */}
+        {/* Row 1 — Subject Target Selector (full width always) */}
         <div className="glass-card calc-target-card">
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
             <Target size={14} style={{ color: 'var(--primary-400)' }} />
-            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Target %</span>
+            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Subject Targets</span>
           </div>
           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-            <motion.button onClick={() => setTargetPct(null)}
+            <motion.button onClick={() => setSubjectTargetPct(null)}
               style={{
                 padding: '5px 8px', borderRadius: 6, fontSize: '0.75rem', cursor: 'pointer',
-                fontWeight: targetPct === null ? 800 : 500,
-                background: targetPct === null ? 'var(--primary-500)' : 'transparent',
-                border: `1px solid ${targetPct === null ? 'var(--primary-500)' : 'var(--border-primary)'}`,
-                color: targetPct === null ? 'white' : 'var(--text-tertiary)',
+                fontWeight: subjectTargetPct === null ? 800 : 500,
+                background: subjectTargetPct === null ? 'var(--primary-500)' : 'transparent',
+                border: `1px solid ${subjectTargetPct === null ? 'var(--primary-500)' : 'var(--border-primary)'}`,
+                color: subjectTargetPct === null ? 'white' : 'var(--text-tertiary)',
               }}
               whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
             >Individual</motion.button>
             {[60, 65, 70, 75, 80, 85, 90, 95, 100].map((pct) => (
-              <motion.button key={pct} onClick={() => setTargetPct(pct)}
+              <motion.button key={pct} onClick={() => setSubjectTargetPct(pct)}
                 style={{
                   padding: '5px 8px', borderRadius: 6, fontSize: '0.75rem', cursor: 'pointer',
-                  fontWeight: targetPct === pct ? 800 : 500,
-                  background: targetPct === pct ? 'var(--primary-500)' : 'transparent',
-                  border: `1px solid ${targetPct === pct ? 'var(--primary-500)' : 'var(--border-primary)'}`,
-                  color: targetPct === pct ? 'white' : 'var(--text-tertiary)',
+                  fontWeight: subjectTargetPct === pct ? 800 : 500,
+                  background: subjectTargetPct === pct ? 'var(--primary-500)' : 'transparent',
+                  border: `1px solid ${subjectTargetPct === pct ? 'var(--primary-500)' : 'var(--border-primary)'}`,
+                  color: subjectTargetPct === pct ? 'white' : 'var(--text-tertiary)',
+                }}
+                whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+              >{pct}%</motion.button>
+            ))}
+          </div>
+        </div>
+
+        {/* Row 1.5 — Overall Target Selector (full width always) */}
+        <div className="glass-card calc-target-card">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+            <Target size={14} style={{ color: 'var(--accent-400)' }} />
+            <span style={{ fontSize: '0.68rem', fontWeight: 700, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Overall Target</span>
+          </div>
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+            {[60, 65, 70, 75, 80, 85, 90, 95, 100].map((pct) => (
+              <motion.button key={pct} onClick={() => setOverallTargetPct(pct)}
+                style={{
+                  padding: '5px 8px', borderRadius: 6, fontSize: '0.75rem', cursor: 'pointer',
+                  fontWeight: overallTargetPct === pct ? 800 : 500,
+                  background: overallTargetPct === pct ? 'var(--accent-500)' : 'transparent',
+                  border: `1px solid ${overallTargetPct === pct ? 'var(--accent-500)' : 'var(--border-primary)'}`,
+                  color: overallTargetPct === pct ? 'white' : 'var(--text-tertiary)',
                 }}
                 whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
               >{pct}%</motion.button>
@@ -230,8 +258,12 @@ export default function AttendanceCalculator() {
 
         {/* Row 3 — Required */}
         <div className="glass-card calc-mini-stat">
-          <div className="calc-stat-label">Required</div>
-          <span className="calc-stat-num" style={{ color: 'var(--primary-400)' }}>{targetPct !== null ? `${targetPct}%` : 'Auto'}</span>
+          <div className="calc-stat-label">Required Overall</div>
+          {overallReq > 0 ? (
+            <span className="calc-stat-num" style={{ color: 'var(--danger-400)', fontSize: '1rem' }}>+{overallReq} classes</span>
+          ) : (
+            <span className="calc-stat-num" style={{ color: 'var(--success-400)', fontSize: '1rem' }}>Achieved!</span>
+          )}
         </div>
       </motion.div>
 
