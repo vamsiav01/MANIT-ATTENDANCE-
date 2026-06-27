@@ -1,193 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GraduationCap, Mail, Lock, User, Eye, EyeOff, AlertCircle, WifiOff, Sparkles, ArrowRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-
-// Rich animated background for login
-function LoginBackground() {
-  const canvasRef = useRef(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    let animationId;
-    let mouseX = canvas.width / 2;
-    let mouseY = canvas.height / 2;
-
-    const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    };
-    resize();
-    window.addEventListener('resize', resize);
-    window.addEventListener('mousemove', (e) => { mouseX = e.clientX; mouseY = e.clientY; });
-
-    // Stars
-    const stars = [];
-    for (let i = 0; i < 120; i++) {
-      stars.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        size: Math.random() * 2.5 + 0.5,
-        speed: Math.random() * 0.02 + 0.008,
-        phase: Math.random() * Math.PI * 2,
-        brightness: Math.random() * 0.7 + 0.3,
-      });
-    }
-
-    // Glowing orbs
-    const orbs = [];
-    for (let i = 0; i < 8; i++) {
-      orbs.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.5,
-        vy: (Math.random() - 0.5) * 0.5,
-        r: Math.random() * 30 + 15,
-        hue: Math.random() > 0.5 ? 220 : 270,
-        opacity: Math.random() * 0.2 + 0.1,
-        pulsePhase: Math.random() * Math.PI * 2,
-      });
-    }
-
-    // Network particles
-    const particles = [];
-    for (let i = 0; i < 60; i++) {
-      particles.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.7,
-        vy: (Math.random() - 0.5) * 0.7,
-        r: Math.random() * 2.5 + 1,
-        opacity: Math.random() * 0.6 + 0.2,
-        hue: 200 + Math.random() * 80,
-      });
-    }
-
-    let time = 0;
-
-    const animate = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      time += 0.016;
-
-      // Stars
-      stars.forEach((s) => {
-        const twinkle = Math.sin(time * 60 * s.speed + s.phase) * 0.5 + 0.5;
-        const alpha = s.brightness * twinkle;
-        const sz = s.size * (0.7 + twinkle * 0.5);
-        
-        ctx.beginPath();
-        // 4-point star
-        ctx.moveTo(s.x, s.y - sz * 2.5);
-        ctx.lineTo(s.x + sz * 0.4, s.y - sz * 0.4);
-        ctx.lineTo(s.x + sz * 2.5, s.y);
-        ctx.lineTo(s.x + sz * 0.4, s.y + sz * 0.4);
-        ctx.lineTo(s.x, s.y + sz * 2.5);
-        ctx.lineTo(s.x - sz * 0.4, s.y + sz * 0.4);
-        ctx.lineTo(s.x - sz * 2.5, s.y);
-        ctx.lineTo(s.x - sz * 0.4, s.y - sz * 0.4);
-        ctx.closePath();
-        ctx.fillStyle = `rgba(180, 200, 255, ${alpha})`;
-        ctx.fill();
-      });
-
-      // Orbs
-      orbs.forEach((o) => {
-        const dx = mouseX - o.x;
-        const dy = mouseY - o.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < 300) {
-          o.vx += dx * 0.0001;
-          o.vy += dy * 0.0001;
-        }
-        o.x += o.vx;
-        o.y += o.vy;
-        o.vx *= 0.998;
-        o.vy *= 0.998;
-        if (o.x < -60) o.x = canvas.width + 60;
-        if (o.x > canvas.width + 60) o.x = -60;
-        if (o.y < -60) o.y = canvas.height + 60;
-        if (o.y > canvas.height + 60) o.y = -60;
-
-        const pulse = Math.sin(time * 40 * 0.015 + o.pulsePhase) * 0.3 + 0.7;
-        const grad = ctx.createRadialGradient(o.x, o.y, 0, o.x, o.y, o.r * 3);
-        const a = o.opacity * pulse;
-        grad.addColorStop(0, `hsla(${o.hue}, 80%, 65%, ${a * 2})`);
-        grad.addColorStop(0.3, `hsla(${o.hue}, 70%, 55%, ${a})`);
-        grad.addColorStop(0.7, `hsla(${o.hue}, 60%, 50%, ${a * 0.3})`);
-        grad.addColorStop(1, 'transparent');
-        ctx.beginPath();
-        ctx.arc(o.x, o.y, o.r * 3, 0, Math.PI * 2);
-        ctx.fillStyle = grad;
-        ctx.fill();
-
-        // Solid core
-        ctx.beginPath();
-        ctx.arc(o.x, o.y, o.r * 0.4, 0, Math.PI * 2);
-        ctx.fillStyle = `hsla(${o.hue}, 80%, 75%, ${a * 2.5})`;
-        ctx.fill();
-      });
-
-      // Particles + connections
-      particles.forEach((p, i) => {
-        const dx = mouseX - p.x;
-        const dy = mouseY - p.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < 200) {
-          p.vx += dx * 0.00015;
-          p.vy += dy * 0.00015;
-        }
-        p.x += p.vx;
-        p.y += p.vy;
-        p.vx *= 0.997;
-        p.vy *= 0.997;
-        if (p.x < 0) p.x = canvas.width;
-        if (p.x > canvas.width) p.x = 0;
-        if (p.y < 0) p.y = canvas.height;
-        if (p.y > canvas.height) p.y = 0;
-
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fillStyle = `hsla(${p.hue}, 70%, 70%, ${p.opacity})`;
-        ctx.fill();
-
-        for (let j = i + 1; j < particles.length; j++) {
-          const p2 = particles[j];
-          const d = Math.sqrt((p.x - p2.x) ** 2 + (p.y - p2.y) ** 2);
-          if (d < 130) {
-            ctx.beginPath();
-            ctx.moveTo(p.x, p.y);
-            ctx.lineTo(p2.x, p2.y);
-            ctx.strokeStyle = `rgba(150, 180, 255, ${0.15 * (1 - d / 130)})`;
-            ctx.lineWidth = 0.6;
-            ctx.stroke();
-          }
-        }
-      });
-
-      // Mouse glow ring
-      const mg = ctx.createRadialGradient(mouseX, mouseY, 0, mouseX, mouseY, 150);
-      mg.addColorStop(0, 'rgba(59, 130, 246, 0.08)');
-      mg.addColorStop(0.5, 'rgba(139, 92, 246, 0.04)');
-      mg.addColorStop(1, 'transparent');
-      ctx.beginPath();
-      ctx.arc(mouseX, mouseY, 150, 0, Math.PI * 2);
-      ctx.fillStyle = mg;
-      ctx.fill();
-
-      animationId = requestAnimationFrame(animate);
-    };
-    animate();
-
-    return () => {
-      cancelAnimationFrame(animationId);
-      window.removeEventListener('resize', resize);
-    };
-  }, []);
-
-  return <canvas ref={canvasRef} style={{ position: 'fixed', inset: 0, zIndex: 0, pointerEvents: 'none' }} />;
-}
 
 export default function LoginPage() {
   const { signInWithGoogle, signInWithEmail, signUpWithEmail, skipAuth, error, clearError, firebaseReady } = useAuth();
@@ -195,6 +9,42 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({ name: '', email: '', password: '' });
+
+  // PWA Install Prompt
+  const [installPrompt, setInstallPrompt] = useState(null);
+  const [isInstalled, setIsInstalled] = useState(false);
+  const [showInstallGuide, setShowInstallGuide] = useState(false);
+
+  useEffect(() => {
+    if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+      setIsInstalled(true);
+    }
+    const handleBeforeInstall = (e) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+    const handleAppInstalled = () => {
+      setIsInstalled(true);
+      setInstallPrompt(null);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstall);
+    window.addEventListener('appinstalled', handleAppInstalled);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstall);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (installPrompt) {
+      installPrompt.prompt();
+      const result = await installPrompt.userChoice;
+      if (result.outcome === 'accepted') setIsInstalled(true);
+      setInstallPrompt(null);
+    } else {
+      setShowInstallGuide(true);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -219,7 +69,35 @@ export default function LoginPage() {
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20, position: 'relative', overflow: 'hidden' }}>
-      <LoginBackground />
+      
+      {/* Install App Button at Top Right */}
+      {!isInstalled && (
+        <motion.button
+          onClick={handleInstallClick}
+          style={{
+            position: 'absolute',
+            top: 20,
+            right: 20,
+            padding: '10px 16px',
+            borderRadius: 20,
+            background: 'rgba(59, 130, 246, 0.15)',
+            border: '1px solid rgba(59, 130, 246, 0.3)',
+            color: '#60a5fa',
+            fontWeight: 600,
+            fontSize: '0.85rem',
+            cursor: 'pointer',
+            zIndex: 10,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6
+          }}
+          whileHover={{ scale: 1.05, background: 'rgba(59, 130, 246, 0.25)' }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          Install App
+        </motion.button>
+      )}
 
       {/* Gradient orbs */}
       <div style={{ position: 'fixed', top: '-15%', left: '-5%', width: '35vw', height: '35vw', borderRadius: '50%', background: 'radial-gradient(circle, rgba(59,130,246,0.18) 0%, transparent 70%)', filter: 'blur(80px)', pointerEvents: 'none', animation: 'floatOrb1 12s ease-in-out infinite' }} />
@@ -391,7 +269,7 @@ export default function LoginPage() {
                   style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: '12px 24px', color: 'rgba(255,255,255,0.5)', fontSize: '0.82rem', fontWeight: 500, cursor: 'pointer', width: '100%' }}
                   whileHover={{ scale: 1.02, borderColor: 'rgba(59,130,246,0.3)' }}
                   whileTap={{ scale: 0.98 }}>
-                  👤 Offline Mode (Local Storage)
+                  👤 Continue as Guest
                 </motion.button>
               </div>
             </>
@@ -407,6 +285,48 @@ export default function LoginPage() {
           )}
         </motion.div>
       </motion.div>
+
+      {/* Install Guide Modal */}
+      <AnimatePresence>
+        {showInstallGuide && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 1000,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+              background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
+            }}
+            onClick={() => setShowInstallGuide(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 10 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 10 }}
+              style={{
+                background: 'var(--surface)', border: '1px solid var(--border-primary)',
+                borderRadius: 20, padding: 24, maxWidth: 360, width: '100%',
+                boxShadow: '0 20px 40px rgba(0,0,0,0.4)', position: 'relative',
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: 12 }}>Install App</h3>
+              <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 20 }}>
+                {/iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase()) 
+                  ? <>To install, tap the <b>Share button</b> (square with arrow) at the bottom of Safari and select <b>"Add to Home Screen"</b>.</>
+                  : <>To install, tap your browser's menu (⋮) and select <b>"Add to Home screen"</b> or <b>"Install app"</b>.</>}
+              </div>
+              <button 
+                style={{ width: '100%', padding: 12, borderRadius: 12, background: 'var(--primary-500)', color: 'white', fontWeight: 700, border: 'none', cursor: 'pointer' }}
+                onClick={() => setShowInstallGuide(false)}
+              >
+                Got it
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <style>{`
         @keyframes floatOrb1 {
