@@ -11,6 +11,7 @@ import {
   clearDailyReminder,
   scheduleSmartNotifications,
   clearSmartNotifications,
+  subscribeToWebPush,
 } from '../utils/notifications';
 import { useAttendance } from './AttendanceContext';
 import { useAuth } from './AuthContext';
@@ -40,6 +41,16 @@ export function NotificationProvider({ children }) {
   // changes settings from outside the app (phone Settings → Apps)
   useEffect(() => {
     if (!isNotificationSupported()) return;
+    
+    // Initialize permission state from OS and refresh subscription if needed
+    const current = getNotificationPermission();
+    setPermission(current);
+    
+    // Auto-refresh subscription in background if already enabled and logged in
+    if (current === 'granted' && localStorage.getItem('manit_self_notif_enabled') === 'true' && user?.uid) {
+      subscribeToWebPush(user.uid);
+    }
+
     const id = setInterval(() => {
       const current = getNotificationPermission();
       setPermission((prev) => {
@@ -67,11 +78,11 @@ export function NotificationProvider({ children }) {
       if (currentPerm === 'denied') {
         return;
       }
-      if (currentPerm !== 'granted') {
-        const result = await requestNotificationPermission(user?.uid);
-        setPermission(result);
-        if (result !== 'granted') return;
-      }
+      // Always request permission to ensure the Web Push subscription is created/refreshed
+      // even if the OS already granted it previously (e.g. if VAPID keys changed)
+      const result = await requestNotificationPermission(user?.uid);
+      setPermission(result);
+      if (result !== 'granted') return;
       await notifyWelcome(profileName || 'Student');
       showToast('✅ Thank you! Notifications activated successfully! 🔔');
       setNotificationsEnabled(true);
