@@ -180,7 +180,7 @@ export default function Dashboard() {
 
         {/* Large Logo Watermark */}
         <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: 400, height: 400, zIndex: 0, opacity: 0.08, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <img src="/manit-logo.png" alt="" style={{ width: '100%', height: '100%', objectFit: 'contain', filter: 'grayscale(100%)' }} />
+          <img src="/manit-logo.png" alt="" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
         </div>
         
         {/* Header with Logo */}

@@ -13,6 +13,7 @@ export default function CalendarPage() {
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [selectedDate, setSelectedDate] = useState(null);
+  const [periodsOverride, setPeriodsOverride] = useState({});
   const detailRef = useRef(null);
 
 
@@ -154,6 +155,7 @@ export default function CalendarPage() {
                 key={cell.dateKey}
                 onClick={() => {
                   setSelectedDate(cell.dateKey);
+                  setPeriodsOverride({});
                   // Auto-scroll to detail panel on mobile
                   if (window.innerWidth < 768) {
                     setTimeout(() => {
@@ -250,9 +252,16 @@ export default function CalendarPage() {
                         <span style={{ fontWeight: 500, fontSize: '0.88rem' }}>{entry.subject.name}</span>
                         <span className="badge badge-info" style={{ fontSize: '0.65rem' }}>{entry.subject.code}</span>
                       </div>
-                      <div style={{ display: 'flex', gap: 6 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        
+                        <div style={{ display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', borderRadius: 6, padding: '2px 4px', marginRight: 4 }} title="Periods">
+                          <button className="btn btn-ghost btn-sm" style={{ padding: 2, height: 22, width: 22, minWidth: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setPeriodsOverride(prev => ({...prev, [entry.subId]: Math.max(1, (prev[entry.subId] !== undefined ? prev[entry.subId] : entry.periods) - 1)}))}>-</button>
+                          <span style={{ fontSize: '0.8rem', width: 14, textAlign: 'center', fontWeight: 700 }}>{periodsOverride[entry.subId] !== undefined ? periodsOverride[entry.subId] : entry.periods}</span>
+                          <button className="btn btn-ghost btn-sm" style={{ padding: 2, height: 22, width: 22, minWidth: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={() => setPeriodsOverride(prev => ({...prev, [entry.subId]: (prev[entry.subId] !== undefined ? prev[entry.subId] : entry.periods) + 1}))}>+</button>
+                        </div>
+
                         <button
-                          onClick={() => entry.status === 'present' ? undoMark(entry.subId, selectedDate) : markPresent(entry.subId, selectedDate, entry.periods)}
+                          onClick={() => { const p = periodsOverride[entry.subId] !== undefined ? periodsOverride[entry.subId] : entry.periods; entry.status === 'present' ? undoMark(entry.subId, selectedDate) : markPresent(entry.subId, selectedDate, p); }}
                           style={{
                             padding: '4px 8px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600,
                             background: entry.status === 'present' ? 'var(--success-500)' : 'rgba(34,197,94,0.1)',
@@ -263,7 +272,7 @@ export default function CalendarPage() {
                           {entry.status === 'present' ? '✓ Present' : 'Present'}
                         </button>
                         <button
-                          onClick={() => entry.status === 'absent' ? undoMark(entry.subId, selectedDate) : markAbsent(entry.subId, selectedDate, entry.periods)}
+                          onClick={() => { const p = periodsOverride[entry.subId] !== undefined ? periodsOverride[entry.subId] : entry.periods; entry.status === 'absent' ? undoMark(entry.subId, selectedDate) : markAbsent(entry.subId, selectedDate, p); }}
                           style={{
                             padding: '4px 8px', borderRadius: 6, border: 'none', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600,
                             background: entry.status === 'absent' ? 'var(--danger-500)' : 'rgba(239,68,68,0.1)',
