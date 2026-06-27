@@ -9,7 +9,7 @@ import {
   signOut as firebaseSignOut,
   updateProfile,
   setPersistence,
-  browserSessionPersistence,
+  browserLocalPersistence,
   deleteUser,
 } from 'firebase/auth';
 import { doc, deleteDoc } from 'firebase/firestore';
@@ -30,8 +30,8 @@ export function AuthProvider({ children }) {
       return;
     }
 
-    // Force session persistence so user must log in when opening a new tab/link
-    setPersistence(auth, browserSessionPersistence)
+    // Force local persistence so user stays logged in when closing app/tab
+    setPersistence(auth, browserLocalPersistence)
       .then(() => {
         // Check for redirect result (mobile Google sign-in fallback)
         return getRedirectResult(auth);

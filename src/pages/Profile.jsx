@@ -18,7 +18,7 @@ import { AppLockSettings } from '../components/AppLock';
 import { notifyMorningSchedule, notifyEveningSummary } from '../utils/notifications';
 
 export default function Profile() {
-  const { profile, subjects, updateProfile, syncStatus, lastSynced, exportBackup, importBackup, forceSyncNow, resetData } = useAttendance();
+  const { profile, subjects, schedule, updateProfile, syncStatus, lastSynced, exportBackup, importBackup, forceSyncNow, resetData } = useAttendance();
   const { user, signOut, deleteAccount, firebaseReady } = useAuth();
   const { permission, notificationsEnabled, toggleNotifications } = useNotifications();
   const { isLockEnabled, hasSetup, lockType, disableLock, enableLock, resetLock } = useAppLock();
@@ -481,7 +481,8 @@ export default function Profile() {
                       <button
                         onClick={() => {
                           const todayName = new Date().toLocaleDateString('en-US', { weekday: 'long' });
-                          const todaySubjects = subjects.filter(s => s.schedule?.[todayName]);
+                          const todayItems = schedule[todayName] || [];
+                          const todaySubjects = todayItems.map(item => subjects.find(s => s.id === item.subjectId)).filter(Boolean);
                           notifyMorningSchedule(todaySubjects, subjects);
                         }}
                         style={{ flex: 1, background: 'rgba(59,130,246,0.1)', color: 'var(--primary-400)', border: '1px solid rgba(59,130,246,0.2)', padding: '10px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}
@@ -491,7 +492,8 @@ export default function Profile() {
                       <button
                         onClick={() => {
                           const todayName = new Date().toLocaleDateString('en-US', { weekday: 'long' });
-                          const todaySubjects = subjects.filter(s => s.schedule?.[todayName]);
+                          const todayItems = schedule[todayName] || [];
+                          const todaySubjects = todayItems.map(item => subjects.find(s => s.id === item.subjectId)).filter(Boolean);
                           const overallPct = getOverallPercentage(subjects);
                           // Mocking all attended for the test
                           notifyEveningSummary(true, 0, overallPct, todaySubjects.length, 0);

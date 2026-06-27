@@ -425,7 +425,8 @@ export function AttendanceProvider({ children }) {
 
   const forceSyncNow = () => { pushToCloud(); };
 
-  const isInitializing = Boolean(user && user.uid !== 'local' && firebaseReady && !dataLoadedFromCloudRef.current);
+  // Only show initializing screen if we have NO local data (isSetup is false) and are waiting for cloud
+  const isInitializing = Boolean(user && user.uid !== 'local' && firebaseReady && !dataLoadedFromCloudRef.current && !isSetup);
 
   const value = {
     subjects, profile, history, schedule, bin, toast,

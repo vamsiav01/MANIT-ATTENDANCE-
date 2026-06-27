@@ -108,6 +108,7 @@ export default function Header() {
   const [isInstalled, setIsInstalled] = useState(false);
   const [showCustomizer, setShowCustomizer] = useState(false);
   const [showLockModal, setShowLockModal] = useState(false);
+  const [showInstallGuide, setShowInstallGuide] = useState(false);
   const notifRef = useRef(null);
 
   // Listen for SW navigation messages (from notification clicks)
@@ -155,12 +156,7 @@ export default function Header() {
       if (result.outcome === 'accepted') setIsInstalled(true);
       setInstallPrompt(null);
     } else {
-      const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-      if (isIos) {
-        alert("To install MANIT Attendance on your iPhone/iPad:\n1. Tap the Share button (square with arrow pointing up) at the bottom of Safari.\n2. Scroll down and tap 'Add to Home Screen'.");
-      } else {
-        alert("To install MANIT Attendance:\nTap the browser menu (3 dots) and select 'Add to Home screen' or 'Install app'.");
-      }
+      setShowInstallGuide(true);
     }
   };
 
@@ -904,6 +900,47 @@ export default function Header() {
           color: var(--text-tertiary); cursor: pointer;
         }
       `}</style>
+
+      {/* Install Guide Modal Fallback */}
+      <AnimatePresence>
+        {showInstallGuide && (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 9999,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)'
+          }}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              style={{
+                background: 'var(--bg-card)', padding: 24, borderRadius: 20,
+                width: '90%', maxWidth: 360, border: '1px solid var(--border-secondary)',
+                boxShadow: '0 20px 40px rgba(0,0,0,0.4)', textAlign: 'center'
+              }}
+            >
+              <div style={{ display: 'inline-flex', padding: 16, background: 'rgba(59,130,246,0.1)', borderRadius: '50%', color: 'var(--primary-400)', marginBottom: 16 }}>
+                <Download size={32} />
+              </div>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: 12 }}>Install App</h3>
+              <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 24 }}>
+                {/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream
+                  ? <>To install, tap the <b>Share button</b> (square with arrow) at the bottom of Safari and select <b>"Add to Home Screen"</b>.</>
+                  : <>To install, tap your browser's menu (⋮) and select <b>"Add to Home screen"</b> or <b>"Install app"</b>.</>}
+              </p>
+              <motion.button
+                onClick={() => setShowInstallGuide(false)}
+                className="btn btn-primary"
+                style={{ width: '100%', padding: 14, borderRadius: 12, fontWeight: 700 }}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                Got it!
+              </motion.button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

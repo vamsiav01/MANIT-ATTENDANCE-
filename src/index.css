@@ -233,7 +233,7 @@ body::before {
   font-weight: 800;
   letter-spacing: 0.15em;
   color: var(--text-primary);
-  opacity: 0.04;
+  opacity: 0.1;
   pointer-events: none;
   z-index: 0;
   background: url('/manit-logo.png') no-repeat center top;
@@ -254,7 +254,7 @@ body::before {
 }
 
 [data-theme="light"] body::before {
-  opacity: 0.12; /* Increased transparency in light mode */
+  opacity: 0.25; /* Increased transparency in light mode */
 }
 
 
