@@ -5,7 +5,7 @@
 // ============================================================
 
 import { doc, setDoc } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db } from '../config/firebase';
 const MANIT_ICON = '/icon-192.png';
 const MANIT_BADGE = '/icon-192.png';
 const STORAGE_KEY = 'manit_notif_permission_asked';
