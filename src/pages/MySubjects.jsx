@@ -19,6 +19,7 @@ export default function MySubjects() {
   const [showModal, setShowModal] = useState(false);
   const [editingSub, setEditingSub] = useState(null);
   const [calendarSubId, setCalendarSubId] = useState(null);
+  const [selectedCalDate, setSelectedCalDate] = useState(null);
   const [calMonth, setCalMonth] = useState(new Date().getMonth());
   const [calYear, setCalYear] = useState(new Date().getFullYear());
   const [formData, setFormData] = useState({
@@ -141,13 +142,17 @@ export default function MySubjects() {
     return { present, absent, holiday };
   }, [calendarSubId, history]);
 
-  const cycleCalStatus = (dateKey) => {
-    const rawCurrent = history[dateKey]?.[calendarSubId] || null;
-    const current = typeof rawCurrent === 'string' ? rawCurrent : rawCurrent?.status;
-    if (!current) markPresent(calendarSubId, dateKey);
-    else if (current === 'present') { undoMark(calendarSubId, dateKey); markAbsent(calendarSubId, dateKey); }
-    else if (current === 'absent') { undoMark(calendarSubId, dateKey); markHoliday(calendarSubId, dateKey); }
-    else { undoMark(calendarSubId, dateKey); }
+  const handleCalMark = (type) => {
+    if (!calendarSubId || !selectedCalDate) return;
+    undoMark(calendarSubId, selectedCalDate);
+    if (type === 'present') markPresent(calendarSubId, selectedCalDate);
+    else if (type === 'absent') markAbsent(calendarSubId, selectedCalDate);
+    else if (type === 'holiday') markHoliday(calendarSubId, selectedCalDate);
+  };
+
+  const handleCalUndo = () => {
+    if (!calendarSubId || !selectedCalDate) return;
+    undoMark(calendarSubId, selectedCalDate);
   };
 
   const getStatusColor = (status) => {
@@ -201,7 +206,7 @@ export default function MySubjects() {
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 4 }}>
-                    <motion.button className="btn btn-ghost btn-icon" onClick={() => { setCalendarSubId(sub.id); setCalMonth(new Date().getMonth()); setCalYear(new Date().getFullYear()); }} whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }} title="Subject Calendar">
+                    <motion.button className="btn btn-ghost btn-icon" onClick={() => { setCalendarSubId(sub.id); setCalMonth(new Date().getMonth()); setCalYear(new Date().getFullYear()); setSelectedCalDate(null); }} whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }} title="Subject Calendar">
                       <Calendar size={14} style={{ color: 'var(--holiday-400)' }} />
                     </motion.button>
                     <motion.button className="btn btn-ghost btn-icon" onClick={() => openEdit(sub)} whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }}>
@@ -383,7 +388,7 @@ export default function MySubjects() {
                   <div style={{ width: 12, height: 12, borderRadius: '50%', background: calendarSub.color }} />
                   {calendarSub.code} — Calendar
                 </h2>
-                <motion.button className="btn btn-ghost btn-icon" onClick={() => setCalendarSubId(null)} whileHover={{ rotate: 90 }} whileTap={{ scale: 0.9 }}>
+                <motion.button className="btn btn-ghost btn-icon" onClick={() => { setCalendarSubId(null); setSelectedCalDate(null); }} whileHover={{ rotate: 90 }} whileTap={{ scale: 0.9 }}>
                   <X size={18} />
                 </motion.button>
               </div>
@@ -425,13 +430,15 @@ export default function MySubjects() {
                   const today = new Date();
                   const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
                   const isToday = cell.dateKey === todayKey;
+                  const isSelected = selectedCalDate === cell.dateKey;
                   return (
-                    <motion.div key={cell.dateKey} onClick={() => cycleCalStatus(cell.dateKey)}
+                    <motion.div key={cell.dateKey} onClick={() => setSelectedCalDate(cell.dateKey)}
                       style={{
                         aspectRatio: '1', borderRadius: 6, display: 'flex', flexDirection: 'column',
                         alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-                        background: getStatusColor(cell.status),
-                        border: isToday ? `2px solid ${calendarSub.color}` : '1px solid transparent',
+                        background: isSelected ? 'rgba(59,130,246,0.15)' : getStatusColor(cell.status),
+                        border: isSelected ? `2px solid var(--primary-400)` : isToday ? `2px solid ${calendarSub.color}` : '1px solid transparent',
+                        boxShadow: isSelected ? '0 0 10px rgba(59,130,246,0.5)' : 'none',
                         transition: 'all 0.15s ease', fontSize: '0.82rem',
                       }}
                       whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.95 }}
@@ -447,9 +454,25 @@ export default function MySubjects() {
                 })}
               </div>
 
-              {/* Legend */}
-              <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginTop: 12, fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>
-                <span>Click to cycle: None → ✓ → ✗ → 📅 → None</span>
+              {/* Action Bar */}
+              <div style={{ marginTop: 16, minHeight: 40 }}>
+                <AnimatePresence mode="wait">
+                  {selectedCalDate ? (
+                    <motion.div key="actions" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} style={{ display: 'flex', gap: 8, justifyContent: 'center', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 600, marginRight: 8, color: 'var(--text-primary)' }}>
+                        {formatDate(selectedCalDate).split(',')[0]}:
+                      </span>
+                      <motion.button className="btn btn-sm" style={{ background: 'rgba(34,197,94,0.15)', color: 'var(--success-400)', border: '1px solid rgba(34,197,94,0.3)', padding: '4px 10px' }} onClick={() => handleCalMark('present')} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}><Check size={14}/> P</motion.button>
+                      <motion.button className="btn btn-sm" style={{ background: 'rgba(239,68,68,0.15)', color: 'var(--danger-400)', border: '1px solid rgba(239,68,68,0.3)', padding: '4px 10px' }} onClick={() => handleCalMark('absent')} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}><X size={14}/> A</motion.button>
+                      <motion.button className="btn btn-sm" style={{ background: 'rgba(20,184,166,0.15)', color: 'var(--holiday-400)', border: '1px solid rgba(20,184,166,0.3)', padding: '4px 10px' }} onClick={() => handleCalMark('holiday')} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}><Calendar size={14}/> H</motion.button>
+                      <motion.button className="btn btn-icon btn-sm" style={{ color: 'var(--text-tertiary)', marginLeft: 4 }} onClick={handleCalUndo} whileHover={{ scale: 1.15 }} whileTap={{ scale: 0.9 }} title="Undo"><Undo2 size={14}/></motion.button>
+                    </motion.div>
+                  ) : (
+                    <motion.div key="legend" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ display: 'flex', justifyContent: 'center', fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>
+                      Select a date to mark attendance
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
             </motion.div>
           </motion.div>
