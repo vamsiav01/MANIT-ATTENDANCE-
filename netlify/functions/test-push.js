@@ -30,7 +30,11 @@ export const handler = async (event) => {
     console.error('Test push error:', err);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: err.message })
+      body: JSON.stringify({ 
+        error: err.message,
+        raw_env_start: process.env.FIREBASE_SERVICE_ACCOUNT ? process.env.FIREBASE_SERVICE_ACCOUNT.substring(0, 30) : 'MISSING',
+        raw_env_end: process.env.FIREBASE_SERVICE_ACCOUNT ? process.env.FIREBASE_SERVICE_ACCOUNT.slice(-30) : 'MISSING'
+      })
     };
   }
 };
