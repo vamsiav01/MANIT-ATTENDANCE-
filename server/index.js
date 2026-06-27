@@ -12,15 +12,20 @@ app.use(express.json());
 // 1. Initialize Firebase Admin
 // WARNING: You must download a serviceAccountKey.json from Firebase Console
 // Project Settings -> Service Accounts -> Generate New Private Key
-// Place the file in this 'server' directory.
 try {
-  const serviceAccount = require('./serviceAccountKey.json');
+  let serviceAccount;
+  if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+    serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+  } else {
+    serviceAccount = require('./serviceAccountKey.json');
+  }
+
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
   });
   console.log('✅ Firebase Admin initialized');
 } catch (err) {
-  console.error('❌ Failed to initialize Firebase Admin. Did you download serviceAccountKey.json?', err.message);
+  console.error('❌ Failed to initialize Firebase Admin.', err.message);
   process.exit(1);
 }
 
