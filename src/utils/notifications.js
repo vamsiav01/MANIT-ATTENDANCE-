@@ -77,10 +77,13 @@ export async function subscribeToWebPush(userId) {
       subscription: JSON.parse(JSON.stringify(subscription)),
       updatedAt: new Date().toISOString()
     });
-
+    console.log('Successfully saved Web Push subscription to Firestore');
     return subscription;
   } catch (err) {
     console.error('Failed to subscribe to web push:', err);
+    import('react-hot-toast').then(({ toast }) => {
+      toast.error('Failed to connect to notification server. Please check your VAPID keys.');
+    });
     return null;
   }
 }
