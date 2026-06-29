@@ -496,7 +496,7 @@ export default function Profile() {
                           const todaySubjects = todayItems.map(id => subjects.find(s => s.id === id)).filter(Boolean);
                           const overallPct = getOverallPercentage(subjects);
                           // Mocking all attended for the test
-                          notifyEveningSummary(true, 0, overallPct, todaySubjects.length, 0);
+                          notifyEveningSummary(true, 0, todaySubjects.length, overallPct, todaySubjects.length, 0);
                         }}
                         style={{ flex: 1, background: 'rgba(139,92,246,0.1)', color: 'var(--accent-400)', border: '1px solid rgba(139,92,246,0.2)', padding: '10px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}
                       >

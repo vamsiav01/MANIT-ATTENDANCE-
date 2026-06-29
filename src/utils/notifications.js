@@ -269,10 +269,12 @@ export async function notifyMorningSchedule(todaySubjects, subjectDetails) {
 
 // ── 🌙 EVENING NOTIFICATION: Today's attendance summary ──
 
-export async function notifyEveningSummary(markedToday, unmarkedCount, overallPct, attendedToday, missedToday) {
+export async function notifyEveningSummary(markedToday, unmarkedCount, totalToday, overallPct, attendedToday, missedToday) {
   if (getNotificationPermission() !== 'granted') return;
 
-  if (!markedToday || unmarkedCount > 0) {
+  if (totalToday === 0) return; // No classes today, no evening summary needed
+
+  if (unmarkedCount > 0) {
     // Haven't marked all classes
     await showNotification('🌙 Please Mark Your Attendance!', {
       body: `You still have ${unmarkedCount} class${unmarkedCount > 1 ? 'es' : ''} not marked for today. Open the app to mark them now!`,
@@ -330,26 +332,30 @@ export function scheduleSmartNotifications(getAppData) {
     // Evening: Fire between 8 PM (20:00) and Midnight if not already fired today
     if (h >= 20 && h < 24 && !localStorage.getItem(eveningKey)) {
       localStorage.setItem(eveningKey, 'true');
-      const { subjects, history } = getAppData();
+      const { subjects, schedule, history } = getAppData();
       const todayHistory = history[todayStr] || {};
+      const todayName = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+      const todaySchedule = schedule[todayName] || [];
 
       let attendedToday = 0;
       let missedToday = 0;
-      let unmarkedCount = 0;
 
       Object.values(todayHistory).forEach(entry => {
         const status = typeof entry === 'string' ? entry : entry?.status;
         if (status === 'present') attendedToday++;
         else if (status === 'absent') missedToday++;
-        else if (!status) unmarkedCount++;
       });
 
-      const markedToday = Object.keys(todayHistory).length > 0;
+      const totalToday = todaySchedule.length;
+      const markedCount = attendedToday + missedToday;
+      const unmarkedCount = Math.max(0, totalToday - markedCount);
+      const markedToday = markedCount > 0;
+
       const totalAttended = subjects.reduce((s, sub) => s + sub.attended, 0);
       const totalClasses = subjects.reduce((s, sub) => s + sub.totalClasses, 0);
       const overallPct = totalClasses > 0 ? Math.round((totalAttended / totalClasses) * 100) : 0;
 
-      notifyEveningSummary(markedToday, unmarkedCount, overallPct, attendedToday, missedToday);
+      notifyEveningSummary(markedToday, unmarkedCount, totalToday, overallPct, attendedToday, missedToday);
     }
   }
 
