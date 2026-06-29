@@ -66,9 +66,7 @@ export async function subscribeToWebPush(userId) {
     const reg = await navigator.serviceWorker.ready;
     const publicVapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
     if (!publicVapidKey) {
-      import('react-hot-toast').then(({ toast }) => {
-        toast.error('Missing VITE_VAPID_PUBLIC_KEY in Environment Variables!');
-      });
+      alert('Missing VITE_VAPID_PUBLIC_KEY in Environment Variables!');
       return null;
     }
 
@@ -87,9 +85,6 @@ export async function subscribeToWebPush(userId) {
   } catch (err) {
     console.error('Failed to subscribe to web push:', err);
     alert('Failed to connect to notification server! Error: ' + err.message);
-    import('react-hot-toast').then(({ toast }) => {
-      toast.error('Failed to connect to notification server. Please check your VAPID keys.');
-    });
     return null;
   }
 }
