@@ -482,7 +482,7 @@ export default function Profile() {
                         onClick={() => {
                           const todayName = new Date().toLocaleDateString('en-US', { weekday: 'long' });
                           const todayItems = schedule[todayName] || [];
-                          const todaySubjects = todayItems.map(item => subjects.find(s => s.id === item.subjectId)).filter(Boolean);
+                          const todaySubjects = todayItems.map(id => subjects.find(s => s.id === id)).filter(Boolean);
                           notifyMorningSchedule(todaySubjects, subjects);
                         }}
                         style={{ flex: 1, background: 'rgba(59,130,246,0.1)', color: 'var(--primary-400)', border: '1px solid rgba(59,130,246,0.2)', padding: '10px', borderRadius: 8, fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer' }}
@@ -493,7 +493,7 @@ export default function Profile() {
                         onClick={() => {
                           const todayName = new Date().toLocaleDateString('en-US', { weekday: 'long' });
                           const todayItems = schedule[todayName] || [];
-                          const todaySubjects = todayItems.map(item => subjects.find(s => s.id === item.subjectId)).filter(Boolean);
+                          const todaySubjects = todayItems.map(id => subjects.find(s => s.id === id)).filter(Boolean);
                           const overallPct = getOverallPercentage(subjects);
                           // Mocking all attended for the test
                           notifyEveningSummary(true, 0, overallPct, todaySubjects.length, 0);
