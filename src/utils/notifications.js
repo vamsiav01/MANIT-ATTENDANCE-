@@ -65,7 +65,12 @@ export async function subscribeToWebPush(userId) {
   try {
     const reg = await navigator.serviceWorker.ready;
     const publicVapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
-    if (!publicVapidKey) return null;
+    if (!publicVapidKey) {
+      import('react-hot-toast').then(({ toast }) => {
+        toast.error('Missing VITE_VAPID_PUBLIC_KEY in Environment Variables!');
+      });
+      return null;
+    }
 
     const subscription = await reg.pushManager.subscribe({
       userVisibleOnly: true,
