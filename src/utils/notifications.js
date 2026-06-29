@@ -325,7 +325,7 @@ export function scheduleSmartNotifications(getAppData) {
       const { subjects, schedule, history } = getAppData();
       const todayName = now.toLocaleDateString('en-US', { weekday: 'long' });
       const todayItems = schedule[todayName] || [];
-      const todaySubjects = todayItems.map(item => subjects.find(s => s.id === item.subjectId)).filter(Boolean);
+      const todaySubjects = todayItems.map(id => subjects.find(s => s.id === id)).filter(Boolean);
       notifyMorningSchedule(todaySubjects, subjects);
     }
 
