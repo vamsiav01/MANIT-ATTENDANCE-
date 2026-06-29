@@ -21,10 +21,15 @@ export const handler = async (event) => {
         sent++;
       }
     }
+    const sa = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || '{}');
     
     return {
       statusCode: 200,
-      body: JSON.stringify({ success: true, message: `Test push sent to ${sent} devices.` })
+      body: JSON.stringify({ 
+        success: true, 
+        message: `Test push sent to ${sent} devices.`,
+        backend_project_id: sa.project_id || 'UNKNOWN'
+      })
     };
   } catch (err) {
     console.error('Test push error:', err);
