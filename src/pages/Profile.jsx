@@ -658,7 +658,12 @@ export default function Profile() {
                     width: '100%', boxSizing: 'border-box',
                   }}>
                     <div style={{ width: 8, height: 8, borderRadius: '50%', background: sub.color, flexShrink: 0 }} />
-                    <span style={{ flex: 1, fontSize: '0.82rem', fontWeight: 600, minWidth: 0 }}>{sub.code}</span>
+                    <span style={{ flex: 1, fontSize: '0.82rem', fontWeight: 600, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {sub.name || sub.code}
+                      {sub.name && sub.code !== sub.name && (
+                        <span style={{ color: 'var(--text-tertiary)', fontWeight: 400, marginLeft: 4 }}>({sub.code})</span>
+                      )}
+                    </span>
                     <span style={{ fontWeight: 800, fontSize: '0.9rem', flexShrink: 0, color: pctColor }}>{pct}%</span>
                   </div>
                 );

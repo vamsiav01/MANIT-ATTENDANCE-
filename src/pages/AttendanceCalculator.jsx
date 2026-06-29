@@ -301,9 +301,9 @@ export default function AttendanceCalculator() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={{ width: 8, height: 8, borderRadius: '50%', background: res.color, flexShrink: 0, boxShadow: `0 0 6px ${res.color}60` }} />
                 <div>
-                  <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>{res.code}</div>
+                  <div style={{ fontWeight: 600, fontSize: '0.88rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{res.name || res.code}</div>
                   <div style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)' }}>
-                    {res.name} <span style={{ color: 'var(--primary-400)', marginLeft: 4 }}>(Target: {res.activeTarget}%)</span>
+                    {res.name && res.code !== res.name ? `${res.code} - ` : ''}Target: {res.activeTarget}%
                   </div>
                 </div>
               </div>
@@ -384,9 +384,9 @@ export default function AttendanceCalculator() {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <div style={{ width: 10, height: 10, borderRadius: '50%', background: res.color, boxShadow: `0 0 8px ${res.color}70` }} />
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: '0.92rem' }}>{res.code}</div>
+                    <div style={{ fontWeight: 700, fontSize: '0.92rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '140px' }}>{res.name || res.code}</div>
                     <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>
-                      {res.name} <span style={{ color: 'var(--primary-400)', marginLeft: 4 }}>(Target: {res.activeTarget}%)</span>
+                      {res.name && res.code !== res.name ? `${res.code} - ` : ''}<span style={{ color: 'var(--primary-400)' }}>Target: {res.activeTarget}%</span>
                     </div>
                   </div>
                 </div>
