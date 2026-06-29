@@ -86,6 +86,7 @@ export async function subscribeToWebPush(userId) {
     return subscription;
   } catch (err) {
     console.error('Failed to subscribe to web push:', err);
+    alert('Failed to connect to notification server! Error: ' + err.message);
     import('react-hot-toast').then(({ toast }) => {
       toast.error('Failed to connect to notification server. Please check your VAPID keys.');
     });
