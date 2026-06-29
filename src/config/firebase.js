@@ -15,13 +15,13 @@ import { getFirestore } from 'firebase/firestore';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyBzaBACEjYiqumnj3tj8owSpD4shoYAcAc",
-  authDomain: "maint-self-attendance.firebaseapp.com",
-  projectId: "maint-self-attendance",
-  storageBucket: "maint-self-attendance.firebasestorage.app",
-  messagingSenderId: "715444738612",
-  appId: "1:715444738612:web:9ae0b20df65fb0e710c861",
-  measurementId: "G-PR3NCS9RJG"
+  apiKey: "AIzaSyA2JsXZPROS9kW-LmwneUySCUV2wsTHhcA",
+  authDomain: "manit-self-attendance.firebaseapp.com",
+  projectId: "manit-self-attendance",
+  storageBucket: "manit-self-attendance.firebasestorage.app",
+  messagingSenderId: "1095003725241",
+  appId: "1:1095003725241:web:093466cce62dbd78146a68",
+  measurementId: "G-27FQJ0JT8Z"
 };
 
 // Initialize Firebase — with graceful fallback
