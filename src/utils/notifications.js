@@ -98,8 +98,12 @@ export async function subscribeToWebPush(userId) {
 
 async function getActiveSW() {
   if (!('serviceWorker' in navigator)) return null;
+  const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 2000));
   try {
-    const reg = await navigator.serviceWorker.ready;
+    const reg = await Promise.race([
+      navigator.serviceWorker.ready,
+      timeoutPromise
+    ]);
     return reg;
   } catch {
     return null;
