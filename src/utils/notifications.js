@@ -21,23 +21,28 @@ export function isNotificationSupported() {
   return 'Notification' in window;
 }
 
-export async function requestNotificationPermission(userId) {
+export async function requestNotificationPermission() {
   if (!isNotificationSupported()) return 'unsupported';
   if (Notification.permission === 'denied') return 'denied';
+  if (Notification.permission === 'granted') return 'granted';
 
   try {
     const permission = await Notification.requestPermission();
     localStorage.setItem(STORAGE_KEY, 'asked');
-    
-    if (permission === 'granted' && userId) {
-      await subscribeToWebPush(userId);
-    }
-    
     return permission;
   } catch (err) {
     console.error('Error requesting permission', err);
     return 'denied';
   }
+}
+
+// Subscribe to web push in the background — does NOT block the toggle
+export function subscribeToWebPushBackground(userId) {
+  if (!userId || userId === 'local') return;
+  // Fire and forget — don't await this
+  subscribeToWebPush(userId).catch(err => {
+    console.warn('Web push subscription failed (non-critical):', err);
+  });
 }
 
 export function hasAskedPermission() {

@@ -12,6 +12,7 @@ import {
   scheduleSmartNotifications,
   clearSmartNotifications,
   subscribeToWebPush,
+  subscribeToWebPushBackground,
 } from '../utils/notifications';
 import { useAttendance } from './AttendanceContext';
 import { useAuth } from './AuthContext';
@@ -70,62 +71,59 @@ export function NotificationProvider({ children }) {
     return () => clearInterval(id);
   }, []);
 
-  // toggleNotifications: if turning ON → request OS permission first
+  // toggleNotifications: instant toggle — OS permission + background web push subscribe
   const toggleNotifications = useCallback(async (profileName) => {
-    console.log('[Toggle] Clicked! Current state:', notificationsEnabled);
-    if (isToggling) {
-      console.log('[Toggle] Already toggling, ignoring click.');
-      return;
-    }
-    
+    if (isToggling) return;
     setIsToggling(true);
-    const currentPerm = getNotificationPermission();
 
     try {
       if (!notificationsEnabled) {
-        // User wants to TURN ON
-        console.log('[Toggle] Attempting to turn ON...');
+        // TURN ON
+        const currentPerm = getNotificationPermission();
+
         if (currentPerm === 'denied') {
-          console.log('[Toggle] Permission denied, aborting.');
+          // Already blocked — can't do anything
           setIsToggling(false);
           return;
         }
-        
-        console.log('[Toggle] Requesting permission/subscription...');
-        const result = await requestNotificationPermission(user?.uid);
-        console.log('[Toggle] Permission result:', result);
-        
+
+        // Step 1: Ask OS for permission (fast — just a browser dialog)
+        const result = await requestNotificationPermission();
         setPermission(result);
+
         if (result !== 'granted') {
-          console.log('[Toggle] Not granted, aborting.');
           setIsToggling(false);
           return;
         }
-        
-        console.log('[Toggle] Showing welcome notification...');
-        await notifyWelcome(profileName || 'Student');
-        
-        console.log('[Toggle] Updating state to TRUE');
-        showToast('✅ Thank you! Notifications activated successfully! 🔔');
+
+        // Step 2: Immediately update UI — toggle is ON!
         setNotificationsEnabled(true);
         localStorage.setItem('manit_self_notif_enabled', 'true');
+        showToast('✅ Notifications activated! 🔔');
         scheduleSmartNotifications(() => ({ subjects, schedule, history }));
+
+        // Step 3: Subscribe to web push in background (non-blocking)
+        if (user?.uid && user.uid !== 'local') {
+          subscribeToWebPushBackground(user.uid);
+        }
+
+        // Step 4: Show welcome notification (non-blocking)
+        notifyWelcome(profileName || 'Student').catch(() => {});
+
       } else {
-        // User wants to TURN OFF
-        console.log('[Toggle] Attempting to turn OFF...');
+        // TURN OFF — instant, no async needed
         setNotificationsEnabled(false);
         localStorage.setItem('manit_self_notif_enabled', 'false');
         clearDailyReminder();
         clearSmartNotifications();
-        console.log('[Toggle] Updated state to FALSE');
       }
     } catch (err) {
-      console.error('[Toggle] Error during toggle:', err);
-      showToast('❌ Error toggling notifications', 'error');
+      console.error('[Toggle] Error:', err);
+      showToast('❌ Failed to toggle notifications', 'error');
     } finally {
       setIsToggling(false);
     }
-  }, [notificationsEnabled, user, subjects, schedule, history, showToast, isToggling]);
+  }, [notificationsEnabled, isToggling, user, subjects, schedule, history, showToast]);
 
   // Show banner after 3s if OS permission not yet asked and not dismissed
   useEffect(() => {

@@ -450,22 +450,18 @@ export default function Profile() {
                       </div>
                     </div>
                     <label 
-                      className={`native-toggle ${isToggling ? 'disabled' : ''}`} 
+                      className="native-toggle"
                       htmlFor="profile-notif-toggle" 
                       title={notificationsEnabled ? 'Notifications ON' : 'Notifications OFF'}
-                      style={{ opacity: isToggling ? 0.5 : 1, cursor: isToggling ? 'wait' : 'pointer' }}
                     >
                       <input
                         type="checkbox"
                         id="profile-notif-toggle"
                         checked={notificationsEnabled}
                         onChange={() => toggleNotifications(profile.name)}
-                        disabled={isToggling}
                       />
                       <span className="native-toggle-track" />
-                      <span className="native-toggle-thumb">
-                        {isToggling && <div className="loading-spinner" style={{ width: 12, height: 12, position: 'absolute', top: 4, left: 4, borderWidth: 2 }} />}
-                      </span>
+                      <span className="native-toggle-thumb" />
                     </label>
                   </div>
                   {permission === 'default' && (
