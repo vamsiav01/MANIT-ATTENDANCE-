@@ -67,16 +67,13 @@ function urlBase64ToUint8Array(base64String) {
 export async function subscribeToWebPush(userId) {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return null;
 
-  const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout waiting for Service Worker')), 15000));
+  const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 15000));
 
   try {
-    const reg = await Promise.race([
-      navigator.serviceWorker.ready,
-      timeoutPromise
-    ]);
+    const reg = await Promise.race([navigator.serviceWorker.ready, timeoutPromise]);
     const publicVapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
     if (!publicVapidKey) {
-      alert('Missing VITE_VAPID_PUBLIC_KEY in Environment Variables!');
+      console.warn('Missing VITE_VAPID_PUBLIC_KEY — push subscription skipped');
       return null;
     }
 
@@ -88,14 +85,35 @@ export async function subscribeToWebPush(userId) {
     // Save to Firestore under pushSubscriptions collection
     await setDoc(doc(db, 'pushSubscriptions', userId), {
       subscription: JSON.parse(JSON.stringify(subscription)),
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      active: true,
     });
-    console.log('Successfully saved Web Push subscription to Firestore');
+    console.log('[Push] Subscription saved to Firestore');
     return subscription;
   } catch (err) {
-    console.error('Failed to subscribe to web push:', err);
-    alert('Failed to connect to notification server! Error: ' + err.message);
+    console.warn('[Push] Failed to subscribe:', err.message);
     return null;
+  }
+}
+
+export async function unsubscribeFromWebPush(userId) {
+  try {
+    // Mark inactive in Firestore (server won't send to inactive)
+    if (db && userId && userId !== 'local') {
+      const { deleteDoc } = await import('firebase/firestore');
+      await deleteDoc(doc(db, 'pushSubscriptions', userId));
+      console.log('[Push] Subscription removed from Firestore');
+    }
+    // Also unsubscribe from browser push manager
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      for (const reg of regs) {
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) await sub.unsubscribe();
+      }
+    }
+  } catch (err) {
+    console.warn('[Push] Unsubscribe error (non-critical):', err.message);
   }
 }
 

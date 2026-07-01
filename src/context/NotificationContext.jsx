@@ -12,6 +12,7 @@ import {
   scheduleSmartNotifications,
   clearSmartNotifications,
   subscribeToWebPushBackground,
+  unsubscribeFromWebPush,
 } from '../utils/notifications';
 import { useAttendance } from './AttendanceContext';
 import { useAuth } from './AuthContext';
@@ -104,20 +105,24 @@ export function NotificationProvider({ children }) {
         showToast('✅ Notifications activated! 🔔');
         scheduleSmartNotifications(() => ({ subjects, schedule, history }));
 
-        // Subscribe web push in background (non-blocking)
+        // Subscribe web push in background (non-blocking) and show confirmation notification
         if (user?.uid && user.uid !== 'local') {
           subscribeToWebPushBackground(user.uid);
         }
 
-        // Show welcome notification (non-blocking)
+        // Always show confirmation notification so user gets proof every time
         notifyWelcome(profileName || 'Student').catch(() => {});
 
       } else {
-        // ── TURN OFF ──────────────────────────────────────────
+        // TURN OFF — instant, no async needed
         localStorage.setItem('manit_self_notif_enabled', 'false');
         setNotificationsEnabled(false);
         clearDailyReminder();
         clearSmartNotifications();
+        // Unsubscribe from server push so server stops sending while OFF
+        if (user?.uid && user.uid !== 'local') {
+          unsubscribeFromWebPush(user.uid).catch(() => {});
+        }
       }
     } catch (err) {
       console.error('[Toggle] Error:', err);
