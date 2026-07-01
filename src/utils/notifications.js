@@ -101,9 +101,9 @@ export async function subscribeToWebPush(userId) {
 
 // ── Show notification via Service Worker ─────────────────────
 
-async function getActiveSW() {
+async function getActiveSW(timeoutMs = 5000) {
   if (!('serviceWorker' in navigator)) return null;
-  const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 2000));
+  const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), timeoutMs));
   try {
     const reg = await Promise.race([
       navigator.serviceWorker.ready,
@@ -111,6 +111,11 @@ async function getActiveSW() {
     ]);
     return reg;
   } catch {
+    // Try to get current registration without waiting for 'active'
+    try {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      if (regs.length > 0) return regs[0];
+    } catch {}
     return null;
   }
 }
@@ -213,11 +218,28 @@ export async function notifyDailyReminder(overallPct) {
 }
 
 export async function notifyWelcome(name) {
-  await showNotification('🎉 Thank You!', {
-    body: `Notifications successfully activated! You will now receive timely reminders, ${name || 'Student'}.`,
-    tag: 'welcome',
-    data: { url: '/' },
-  });
+  if (getNotificationPermission() !== 'granted') return;
+  const title = '🔔 Notifications Activated!';
+  const body = `You'll now receive attendance reminders, ${name || 'Student'}. All set!`;
+  
+  // Try Service Worker first (required on mobile)
+  const reg = await getActiveSW(5000);
+  if (reg) {
+    try {
+      await reg.showNotification(title, {
+        body,
+        icon: MANIT_ICON,
+        badge: MANIT_BADGE,
+        tag: 'welcome',
+        vibrate: [200, 100, 200],
+      });
+      return;
+    } catch {}
+  }
+  // Fallback for desktop
+  try {
+    new Notification(title, { body, icon: MANIT_ICON, tag: 'welcome' });
+  } catch {}
 }
 
 // ── 🌅 MORNING NOTIFICATION: Today's class schedule + risk alert ──

@@ -421,36 +421,49 @@ export default function Profile() {
               <p style={{ fontSize: '0.68rem', color: 'var(--text-tertiary)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>Notifications</p>
 
               {permission === 'unsupported' ? (
-                <div style={{
-                  padding: 14, borderRadius: 10,
-                  background: 'rgba(234,179,8,0.06)', border: '1px solid rgba(234,179,8,0.2)',
-                  fontSize: '0.78rem', color: 'var(--warning-400)', lineHeight: 1.6,
-                }}>
+                <div style={{ padding: 14, borderRadius: 10, background: 'rgba(234,179,8,0.06)', border: '1px solid rgba(234,179,8,0.2)', fontSize: '0.78rem', color: 'var(--warning-400)', lineHeight: 1.6 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, marginBottom: 6 }}>
                     <AlertTriangle size={15} style={{ flexShrink: 0 }} /> Push Not Supported
                   </div>
-                  Your browser or current connection does not support push notifications. In-app alerts will still work!
+                  Your browser does not support push notifications.
+                </div>
+              ) : permission === 'denied' ? (
+                <div style={{ padding: 14, borderRadius: 10, background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.3)', lineHeight: 1.6 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 700, marginBottom: 6, color: 'var(--danger-400)', fontSize: '0.85rem' }}>
+                    <AlertTriangle size={15} style={{ flexShrink: 0 }} /> Notifications Blocked by Browser
+                  </div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 10 }}>
+                    Your browser has blocked this site from sending notifications. You must manually re-enable it:
+                  </div>
+                  <div style={{ fontSize: '0.73rem', color: 'var(--danger-400)', marginBottom: 10 }}>
+                    📱 <b>Android:</b> Settings → Apps → Chrome → Notifications → Allow<br />
+                    💻 <b>Desktop:</b> Click the 🔒 lock icon in the address bar → Notifications → Allow
+                  </div>
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-tertiary)' }}>After allowing, come back here and toggle ON.</div>
                 </div>
               ) : (
                 <>
                   <div style={{
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     padding: '12px 14px', borderRadius: 10,
-                    background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-primary)',
-                    marginBottom: 8, overflow: 'hidden',
+                    background: notificationsEnabled ? 'rgba(34,197,94,0.05)' : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${notificationsEnabled ? 'rgba(34,197,94,0.25)' : 'var(--border-primary)'}`,
+                    marginBottom: 8, transition: 'all 0.3s ease',
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       {notificationsEnabled
-                        ? <Bell size={16} style={{ color: 'var(--primary-400)' }} />
+                        ? <Bell size={16} style={{ color: 'var(--success-400)' }} />
                         : <BellOff size={16} style={{ color: 'var(--text-tertiary)' }} />}
                       <div>
                         <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-primary)' }}>Push Notifications</div>
-                        <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>Low attendance &amp; daily reminders</div>
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>
+                          {notificationsEnabled ? 'Active — 8AM & 8PM daily reminders' : 'Off — toggle to enable reminders'}
+                        </div>
                       </div>
                     </div>
-                    <label 
+                    <label
                       className="native-toggle"
-                      htmlFor="profile-notif-toggle" 
+                      htmlFor="profile-notif-toggle"
                       title={notificationsEnabled ? 'Notifications ON' : 'Notifications OFF'}
                     >
                       <input
@@ -463,20 +476,14 @@ export default function Profile() {
                       <span className="native-toggle-thumb" />
                     </label>
                   </div>
-                  {permission === 'default' && (
+                  {permission === 'default' && !notificationsEnabled && (
                     <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(59,130,246,0.06)', border: '1px solid rgba(59,130,246,0.2)', display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.78rem', color: 'var(--primary-400)' }}>
-                      <Bell size={14} /> Toggle ON above to enable push notifications
-                    </div>
-                  )}
-                  {permission === 'denied' && (
-                    <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: '0.73rem', color: 'var(--danger-400)', lineHeight: 1.6 }}>
-                      <AlertTriangle size={14} style={{ flexShrink: 0, marginTop: 2 }} />
-                      <span>Blocked. Go to <b>Phone Settings → Apps → Chrome → Notifications</b> and tap Allow, then toggle ON here.</span>
+                      <Bell size={14} /> Toggle ON — browser will ask for permission
                     </div>
                   )}
                   {permission === 'granted' && notificationsEnabled && (
                     <div style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.2)', display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.78rem', color: 'var(--success-400)' }}>
-                      <CheckCircle2 size={14} /> Push notifications are active
+                      <CheckCircle2 size={14} /> Active — you'll get notified at 8AM &amp; 8PM
                     </div>
                   )}
                   {permission === 'granted' && !notificationsEnabled && (
@@ -484,6 +491,7 @@ export default function Profile() {
                       <BellOff size={14} /> Paused — toggle ON to re-enable
                     </div>
                   )}
+
                   {permission === 'granted' && notificationsEnabled && (
                     <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
                       <button
