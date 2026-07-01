@@ -39,36 +39,45 @@ export function NotificationProvider({ children }) {
     return osPermission === 'granted' && (stored === null ? true : stored === 'true');
   });
 
-  // Poll the real OS permission every 2s so UI stays in sync when user
-  // changes settings from outside the app (phone Settings → Apps)
+  // Sync OS permission with toggle whenever user returns to the app tab
+  // (e.g., after changing notification settings in Android Settings)
   useEffect(() => {
     if (!isNotificationSupported()) return;
-    
-    // Initialize permission state from OS and refresh subscription if needed
-    const current = getNotificationPermission();
-    setPermission(current);
-    
-    // Auto-refresh subscription in background if already enabled and logged in
-    if (current === 'granted' && localStorage.getItem('manit_self_notif_enabled') === 'true' && user?.uid) {
-      subscribeToWebPush(user.uid);
-    }
 
-    const id = setInterval(() => {
+    const syncPermission = () => {
       const current = getNotificationPermission();
-      setPermission((prev) => {
-        if (prev !== current) {
-          // OS permission changed externally
-          if (current !== 'granted') {
-            // OS revoked — disable in-app too
-            setNotificationsEnabled(false);
-            localStorage.setItem('manit_self_notif_enabled', 'false');
-          }
-          return current;
-        }
-        return prev;
-      });
-    }, 2000);
-    return () => clearInterval(id);
+      setPermission(current);
+
+      const storedEnabled = localStorage.getItem('manit_self_notif_enabled');
+
+      if (current === 'granted' && storedEnabled === 'true') {
+        // OS allows + user wants it ON → ensure toggle is ON
+        setNotificationsEnabled(true);
+      } else if (current !== 'granted') {
+        // OS denied/revoked → force toggle OFF
+        setNotificationsEnabled(false);
+        localStorage.setItem('manit_self_notif_enabled', 'false');
+      }
+    };
+
+    // Run immediately on mount
+    syncPermission();
+
+    // Run whenever user switches back to the app tab (from phone Settings)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        syncPermission();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Also poll every 3s as a fallback for PWA/mobile
+    const id = setInterval(syncPermission, 3000);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      clearInterval(id);
+    };
   }, []);
 
   // toggleNotifications: instant toggle — OS permission + background web push subscribe
