@@ -28,6 +28,7 @@ export function NotificationProvider({ children }) {
   const [bannerDismissed, setBannerDismissed] = useState(() =>
     localStorage.getItem('manit_self_notif_banner_dismissed') === 'true'
   );
+  const [isToggling, setIsToggling] = useState(false);
 
   // notificationsEnabled = OS permission is granted AND user hasn't disabled in-app
   const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
@@ -71,31 +72,60 @@ export function NotificationProvider({ children }) {
 
   // toggleNotifications: if turning ON → request OS permission first
   const toggleNotifications = useCallback(async (profileName) => {
+    console.log('[Toggle] Clicked! Current state:', notificationsEnabled);
+    if (isToggling) {
+      console.log('[Toggle] Already toggling, ignoring click.');
+      return;
+    }
+    
+    setIsToggling(true);
     const currentPerm = getNotificationPermission();
 
-    if (!notificationsEnabled) {
-      // User wants to TURN ON
-      if (currentPerm === 'denied') {
-        return;
+    try {
+      if (!notificationsEnabled) {
+        // User wants to TURN ON
+        console.log('[Toggle] Attempting to turn ON...');
+        if (currentPerm === 'denied') {
+          console.log('[Toggle] Permission denied, aborting.');
+          setIsToggling(false);
+          return;
+        }
+        
+        console.log('[Toggle] Requesting permission/subscription...');
+        const result = await requestNotificationPermission(user?.uid);
+        console.log('[Toggle] Permission result:', result);
+        
+        setPermission(result);
+        if (result !== 'granted') {
+          console.log('[Toggle] Not granted, aborting.');
+          setIsToggling(false);
+          return;
+        }
+        
+        console.log('[Toggle] Showing welcome notification...');
+        await notifyWelcome(profileName || 'Student');
+        
+        console.log('[Toggle] Updating state to TRUE');
+        showToast('✅ Thank you! Notifications activated successfully! 🔔');
+        setNotificationsEnabled(true);
+        localStorage.setItem('manit_self_notif_enabled', 'true');
+        scheduleSmartNotifications(() => ({ subjects, schedule, history }));
+      } else {
+        // User wants to TURN OFF
+        console.log('[Toggle] Attempting to turn OFF...');
+        setNotificationsEnabled(false);
+        localStorage.setItem('manit_self_notif_enabled', 'false');
+        clearDailyReminder();
+        clearSmartNotifications();
+        console.log('[Toggle] Updated state to FALSE');
       }
-      // Always request permission to ensure the Web Push subscription is created/refreshed
-      // even if the OS already granted it previously (e.g. if VAPID keys changed)
-      const result = await requestNotificationPermission(user?.uid);
-      setPermission(result);
-      if (result !== 'granted') return;
-      await notifyWelcome(profileName || 'Student');
-      showToast('✅ Thank you! Notifications activated successfully! 🔔');
-      setNotificationsEnabled(true);
-      localStorage.setItem('manit_self_notif_enabled', 'true');
-      // Start smart morning + evening notifications
-      scheduleSmartNotifications(() => ({ subjects, schedule, history }));
-    } else {
-      setNotificationsEnabled(false);
-      localStorage.setItem('manit_self_notif_enabled', 'false');
-      clearDailyReminder();
-      clearSmartNotifications();
+    } catch (err) {
+      console.error('[Toggle] Error during toggle:', err);
+      showToast('❌ Error toggling notifications', 'error');
+    } finally {
+      setIsToggling(false);
     }
-  }, [notificationsEnabled, user, subjects, schedule, history, showToast]);
+  }, [notificationsEnabled, user, subjects, schedule, history, showToast, isToggling]);
 
   // Show banner after 3s if OS permission not yet asked and not dismissed
   useEffect(() => {
@@ -187,6 +217,7 @@ export function NotificationProvider({ children }) {
     showBanner,
     isSupported: isNotificationSupported(),
     notificationsEnabled,
+    isToggling,
     toggleNotifications,
     askPermission,
     dismissBanner,

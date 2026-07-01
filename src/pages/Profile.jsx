@@ -20,7 +20,12 @@ import { notifyMorningSchedule, notifyEveningSummary } from '../utils/notificati
 export default function Profile() {
   const { profile, subjects, schedule, updateProfile, syncStatus, lastSynced, exportBackup, importBackup, forceSyncNow, resetData } = useAttendance();
   const { user, signOut, deleteAccount, firebaseReady } = useAuth();
-  const { permission, notificationsEnabled, toggleNotifications } = useNotifications();
+  const {
+    permission,
+    notificationsEnabled,
+    isToggling,
+    toggleNotifications
+  } = useNotifications();
   const { isLockEnabled, hasSetup, lockType, disableLock, enableLock, resetLock } = useAppLock();
   const { accentColor, setColorPreset, setCustomColor } = useTheme();
   const [formData, setFormData] = useState({ ...profile });
@@ -444,15 +449,23 @@ export default function Profile() {
                         <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)' }}>Low attendance &amp; daily reminders</div>
                       </div>
                     </div>
-                    <label className="native-toggle" htmlFor="profile-notif-toggle" title={notificationsEnabled ? 'Notifications ON' : 'Notifications OFF'}>
+                    <label 
+                      className={`native-toggle ${isToggling ? 'disabled' : ''}`} 
+                      htmlFor="profile-notif-toggle" 
+                      title={notificationsEnabled ? 'Notifications ON' : 'Notifications OFF'}
+                      style={{ opacity: isToggling ? 0.5 : 1, cursor: isToggling ? 'wait' : 'pointer' }}
+                    >
                       <input
                         type="checkbox"
                         id="profile-notif-toggle"
                         checked={notificationsEnabled}
                         onChange={() => toggleNotifications(profile.name)}
+                        disabled={isToggling}
                       />
                       <span className="native-toggle-track" />
-                      <span className="native-toggle-thumb" />
+                      <span className="native-toggle-thumb">
+                        {isToggling && <div className="loading-spinner" style={{ width: 12, height: 12, position: 'absolute', top: 4, left: 4, borderWidth: 2 }} />}
+                      </span>
                     </label>
                   </div>
                   {permission === 'default' && (
