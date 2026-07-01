@@ -95,7 +95,7 @@ export function NotificationProvider({ children }) {
       clearDailyReminder();
       clearSmartNotifications();
     }
-  }, [notificationsEnabled]);
+  }, [notificationsEnabled, user, subjects, schedule, history, showToast]);
 
   // Show banner after 3s if OS permission not yet asked and not dismissed
   useEffect(() => {

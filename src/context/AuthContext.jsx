@@ -18,8 +18,15 @@ import { auth, db, googleProvider, isFirebaseConfigured } from '../config/fireba
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(() => {
+    if (sessionStorage.getItem('autoLoginGuest') === 'true') {
+      return { uid: 'local', displayName: 'Guest', email: 'guest@local', photoURL: null, provider: 'local' };
+    }
+    return null;
+  });
+  const [loading, setLoading] = useState(() => {
+    return sessionStorage.getItem('autoLoginGuest') !== 'true';
+  });
   const [error, setError] = useState(null);
 
   const firebaseReady = isFirebaseConfigured() && auth;

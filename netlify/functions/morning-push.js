@@ -3,7 +3,7 @@ import { getDb, initWebPush, sendPush } from './utils.js';
 
 const getTodayName = () => new Date().toLocaleDateString('en-US', { weekday: 'long' });
 
-export const handler = schedule('0 8 * * *', async (event) => {
+export const handler = schedule('30 2 * * *', async (event) => {
   console.log('Running morning push notifications job...');
   
   try {

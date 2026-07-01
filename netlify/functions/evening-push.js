@@ -7,7 +7,7 @@ const getTodayKey = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
-export const handler = schedule('0 18 * * *', async (event) => {
+export const handler = schedule('30 14 * * *', async (event) => {
   console.log('Running evening push notifications job...');
   
   try {
