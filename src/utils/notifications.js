@@ -62,8 +62,13 @@ function urlBase64ToUint8Array(base64String) {
 export async function subscribeToWebPush(userId) {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return null;
 
+  const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout waiting for Service Worker')), 15000));
+
   try {
-    const reg = await navigator.serviceWorker.ready;
+    const reg = await Promise.race([
+      navigator.serviceWorker.ready,
+      timeoutPromise
+    ]);
     const publicVapidKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
     if (!publicVapidKey) {
       alert('Missing VITE_VAPID_PUBLIC_KEY in Environment Variables!');
