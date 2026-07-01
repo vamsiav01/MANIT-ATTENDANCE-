@@ -23,7 +23,6 @@ export default function Profile() {
   const {
     permission,
     notificationsEnabled,
-    isToggling,
     toggleNotifications
   } = useNotifications();
   const { isLockEnabled, hasSetup, lockType, disableLock, enableLock, resetLock } = useAppLock();
